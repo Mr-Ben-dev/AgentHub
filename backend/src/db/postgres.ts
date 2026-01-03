@@ -402,6 +402,8 @@ export const postgresDb: Database = {
         win_rate_bps: row.win_rate_bps,
         avg_pnl_bps: row.avg_pnl_bps,
         total_pnl_bps: row.total_pnl_bps,
+        best_win_bps: 0,
+        worst_loss_bps: 0,
         followers_count: row.followers_count,
         updated_at: row.stats_updated_at,
       },

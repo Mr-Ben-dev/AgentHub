@@ -195,6 +195,8 @@ export const memoryDb: Database = {
       win_rate_bps: 0,
       avg_pnl_bps: 0,
       total_pnl_bps: 0,
+      best_win_bps: 0,
+      worst_loss_bps: 0,
       followers_count: 0,
       updated_at: new Date(),
     };
@@ -448,12 +450,14 @@ export const memoryDb: Database = {
           win_rate_bps: 0,
           avg_pnl_bps: 0,
           total_pnl_bps: 0,
+          best_win_bps: 0,
+          worst_loss_bps: 0,
           followers_count: followerCount,
           updated_at: new Date(),
         };
         strategyStats.set(strategy.id, stats);
       }
-      result.push({ ...strategy, stats });
+      result.push({ ...strategy, stats: stats! });
     }
 
     // Sort by followers DESC, then by win rate DESC, then by total PnL DESC
