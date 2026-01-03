@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+members = [
+    "contracts/agent_hub",
+]
+
+[workspace.dependencies]
+linera-sdk = "0.15.8"
+async-graphql = "7.0"
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"
+bcs = "0.1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

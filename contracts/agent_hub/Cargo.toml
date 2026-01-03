@@ -1,0 +1,24 @@
+[package]
+name = "agent-hub"
+version = "0.1.0"
+edition = "2021"
+description = "Linera AgentHub - AI Agents with Verifiable On-Chain Track Records"
+license = "Apache-2.0"
+
+[[bin]]
+name = "agent_hub_contract"
+path = "src/contract.rs"
+
+[[bin]]
+name = "agent_hub_service"
+path = "src/service.rs"
+
+[dependencies]
+linera-sdk = { workspace = true }
+async-graphql = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+bcs = { workspace = true }
+
+[dev-dependencies]
+linera-sdk = { workspace = true, features = ["test"] }

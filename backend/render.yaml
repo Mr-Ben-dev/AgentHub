@@ -1,0 +1,19 @@
+# Render Blueprint for AgentHub Backend
+services:
+  - type: web
+    name: agenthub-backend
+    runtime: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: CORS_ORIGINS
+        sync: false
+      - key: CRYPTOCOMPARE_API_KEY
+        sync: false
