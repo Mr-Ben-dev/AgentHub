@@ -30,9 +30,12 @@ interface PriceDisplayProps {
 export default function PriceDisplay({ symbol, showAll = false, className }: PriceDisplayProps) {
   const [prevPrices, setPrevPrices] = useState<Record<string, number>>({});
 
-  const { data: priceData } = useQuery({
+  const { data: priceData } = useQuery<PriceResponse>({
     queryKey: ['prices'],
-    queryFn: () => api.getPrices() as Promise<PriceResponse>,
+    queryFn: async () => {
+      const response = await api.getPrices();
+      return response as unknown as PriceResponse;
+    },
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 

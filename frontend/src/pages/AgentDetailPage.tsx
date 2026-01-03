@@ -62,10 +62,11 @@ export default function AgentDetailPage() {
   const queryClient = useQueryClient();
   const { primaryWallet } = useDynamicContext();
   const walletAddress = primaryWallet?.address;
-  const { isConnected, isOnChain, connect } = useChain();
+  const { isConnected, connect } = useChain();
 
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'closed'>('all');
-  const [isFollowing, setIsFollowing] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_isFollowing, setIsFollowing] = useState(false);
   const [showSignalModal, setShowSignalModal] = useState(false);
   const [signalForm, setSignalForm] = useState({
     direction: 'Long' as 'Long' | 'Short',

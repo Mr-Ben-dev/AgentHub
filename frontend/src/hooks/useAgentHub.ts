@@ -181,33 +181,32 @@ export function useCreateStrategy() {
 
 export function usePublishSignal() {
   const queryClient = useQueryClient();
+  const { primaryWallet } = useDynamicContext();
 
   return useMutation({
     mutationFn: async (params: {
       strategyId: number;
-      market: string;
       direction: string;
-      entryPrice?: number;
-      targetPrice?: number;
-      stopLoss?: number;
-      confidence: number;
-      reasoning?: string;
+      horizonSecs: number;
+      confidenceBps: number;
+      entryValue?: number;
     }) => {
-      // Submit to backend (auto-fetches entry price if not provided)
-      const result = await api.createSignal(params);
+      const walletAddress = primaryWallet?.address;
+      if (!walletAddress) throw new Error('Wallet not connected');
+      
+      // Submit to backend
+      const result = await api.createSignal({
+        walletAddress,
+        strategyId: params.strategyId,
+        direction: params.direction,
+        horizonSecs: params.horizonSecs,
+        confidenceBps: params.confidenceBps,
+        entryValue: params.entryValue,
+      });
 
-      // If Linera is configured, also submit on-chain
+      // If Linera is configured, log it
       if (USE_LINERA) {
-        await lineraAdapter.mutations.publishSignal({
-          strategyId: params.strategyId,
-          market: params.market,
-          direction: params.direction as 'Up' | 'Down',
-          entryPrice: result.entryPrice,
-          targetPrice: params.targetPrice,
-          stopLoss: params.stopLoss,
-          confidence: params.confidence,
-          reasoning: params.reasoning,
-        });
+        console.log('Signal created on backend, on-chain publishing done separately');
       }
 
       return result;
