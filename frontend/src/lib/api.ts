@@ -110,6 +110,7 @@ export interface Signal {
   confidence: number;
   reasoning?: string;
   status: string;
+  result?: string; // 'win' | 'lose' | 'push' | null
   exitPrice?: number;
   pnlPercent?: number;
   createdAt: string;

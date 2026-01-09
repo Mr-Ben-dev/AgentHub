@@ -1,6 +1,12 @@
 // ============================================================================
 // useChain Hook - React integration for Linera chain operations
 // ============================================================================
+// 
+// Implements SESSION-BASED AUTO-SIGNING (Linera v0.15.8 SDK feature):
+// - User signs ONCE when connecting wallet
+// - All subsequent operations use auto-signer (no popups!)
+// - Check isAutoSignEnabled to know if auto-signing is active
+// ============================================================================
 
 import { useState, useEffect, useCallback } from 'react';
 import { useDynamicContext } from '@dynamic-labs/sdk-react-core';
@@ -16,6 +22,9 @@ export interface ChainState {
   isInitialized: boolean;
   chainId: string | null;
   error: string | null;
+  // Auto-signing additions
+  isAutoSignEnabled: boolean;
+  autoSignerAddress: string | null;
 }
 
 export interface UseChainReturn extends ChainState {
@@ -29,8 +38,13 @@ export interface UseChainReturn extends ChainState {
 // ============================================================================
 
 /**
- * React hook for managing Linera chain connection
- * Integrates with Dynamic.xyz wallet and handles connection lifecycle
+ * React hook for managing Linera chain connection with AUTO-SIGNING
+ * 
+ * AUTO-SIGNING FLOW:
+ * 1. User connects wallet (triggers one-time signature)
+ * 2. Auto-signer is added as chain owner
+ * 3. All subsequent operations use auto-signer (no popups!)
+ * 4. isAutoSignEnabled = true when working
  */
 export function useChain(): UseChainReturn {
   const { primaryWallet, setShowAuthFlow } = useDynamicContext();
@@ -41,6 +55,8 @@ export function useChain(): UseChainReturn {
     isInitialized: false,
     chainId: chainManager.getChainId(),
     error: null,
+    isAutoSignEnabled: chainManager.isAutoSignEnabled(),
+    autoSignerAddress: chainManager.getAutoSignerAddress(),
   });
 
   // Subscribe to chain state changes
@@ -50,6 +66,8 @@ export function useChain(): UseChainReturn {
         ...prev,
         isConnected: chainManager.isConnected(),
         chainId: chainManager.getChainId(),
+        isAutoSignEnabled: chainManager.isAutoSignEnabled(),
+        autoSignerAddress: chainManager.getAutoSignerAddress(),
       }));
     });
 
@@ -122,6 +140,8 @@ export function useChain(): UseChainReturn {
         isInitialized: false,
         chainId: null,
         error: null,
+        isAutoSignEnabled: false,
+        autoSignerAddress: null,
       });
     } catch (error) {
       console.error('Chain disconnect failed:', error);

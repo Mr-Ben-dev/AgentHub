@@ -592,33 +592,52 @@ function calculateSignalResult(
     return { result: 'push', pnl_bps: 0 };
   }
 
-  // Calculate PnL in basis points
-  let pnl_bps = Math.round(((resolvedValue - entry) * 10000) / entry);
+  // Calculate PnL in basis points (price change percentage * 100)
+  const pnlBps = Math.round(((resolvedValue - entry) * 10000) / entry);
 
-  // Determine result based on direction
+  // Determine result based on direction (case-insensitive)
   let result: SignalResult;
-  const direction = signal.direction;
+  const direction = signal.direction.toLowerCase();
 
-  if (direction === 'Up' || direction === 'Over' || direction === 'Yes') {
+  // UP/OVER/YES = expecting price to go UP
+  const isLongDirection = direction === 'up' || direction === 'over' || direction === 'yes' || direction === 'long';
+  
+  // DOWN/UNDER/NO = expecting price to go DOWN
+  const isShortDirection = direction === 'down' || direction === 'under' || direction === 'no' || direction === 'short';
+
+  let finalPnlBps: number;
+
+  if (isLongDirection) {
+    // LONG: Win if price went UP
     if (resolvedValue > entry) {
       result = 'win';
+      finalPnlBps = Math.abs(pnlBps); // Positive PnL
     } else if (resolvedValue < entry) {
       result = 'lose';
+      finalPnlBps = -Math.abs(pnlBps); // Negative PnL
     } else {
       result = 'push';
+      finalPnlBps = 0;
     }
-  } else {
-    // Down, Under, No
+  } else if (isShortDirection) {
+    // SHORT/DOWN: Win if price went DOWN
     if (resolvedValue < entry) {
       result = 'win';
-      pnl_bps = -pnl_bps; // Positive PnL for correct DOWN prediction
+      finalPnlBps = Math.abs(pnlBps); // Positive PnL for correct DOWN prediction
     } else if (resolvedValue > entry) {
       result = 'lose';
-      pnl_bps = -pnl_bps; // Negative PnL for wrong DOWN prediction
+      finalPnlBps = -Math.abs(pnlBps); // Negative PnL for wrong DOWN prediction
     } else {
       result = 'push';
+      finalPnlBps = 0;
     }
+  } else {
+    // Unknown direction - default to push
+    result = 'push';
+    finalPnlBps = 0;
   }
 
-  return { result, pnl_bps };
+  console.log(`📊 Signal result: direction=${signal.direction}, entry=${entry}, resolved=${resolvedValue}, result=${result}, pnl=${finalPnlBps}bps`);
+
+  return { result, pnl_bps: finalPnlBps };
 }

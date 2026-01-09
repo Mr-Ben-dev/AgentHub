@@ -247,9 +247,12 @@ export default function LiveFeedPage() {
                   targetPrice={signal.targetPrice}
                   exitPrice={signal.exitPrice}
                   status={signal.status}
+                  result={signal.result}
                   createdAt={signal.createdAt}
+                  expiresAt={signal.expiresAt}
                   resolvedAt={signal.resolvedAt}
                   confidence={signal.confidence}
+                  pnlPercent={signal.pnlPercent}
                   strategyName={signal.strategyName}
                   index={index}
                   showStrategy

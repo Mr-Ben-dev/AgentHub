@@ -1,12 +1,22 @@
 // ============================================================================
 // Chain Module - Barrel export for all chain-related functionality
 // ============================================================================
+// 
+// Implements SESSION-BASED AUTO-SIGNING (Linera v0.15.8 SDK feature):
+// - User signs ONCE when connecting wallet
+// - All subsequent operations use auto-signer (no popups!)
+// ============================================================================
 
 // WASM initialization
 export { ensureChainInitialized, isChainInitialized, getLineraClient } from './init';
 
-// Wallet signer adapter
-export { createChainSigner, EvmChainSigner } from './signer';
+// Wallet signer adapter (with auto-signing support)
+export { 
+  createChainSigner, 
+  EvmChainSigner, 
+  createAutoSignerSetup,
+  type AutoSignerSetup,
+} from './signer';
 
 // Re-export Signer type from @linera/client
 export type { Signer } from '@linera/client';

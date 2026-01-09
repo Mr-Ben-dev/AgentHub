@@ -2,6 +2,7 @@
 // SignalCard - Premium Signal Display with Lucide Icons
 // ============================================================================
 
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import {
   TrendingUp,
@@ -13,6 +14,7 @@ import {
   Bitcoin,
   ArrowRight,
   Sparkles,
+  Timer,
 } from 'lucide-react';
 import {
   cn,
@@ -21,19 +23,69 @@ import {
 } from '@/lib/utils';
 
 interface SignalCardProps {
-  id: number;
+  id: number | string;
   market: string;
   direction: string;
   entryPrice: number;
   targetPrice?: number;
   exitPrice?: number;
   status: string;
+  result?: string; // 'win' | 'lose' | 'push'
   createdAt: string;
+  expiresAt?: string;
   resolvedAt?: string;
   confidence?: number;
+  pnlPercent?: number;
   strategyName?: string;
   index?: number;
   showStrategy?: boolean;
+}
+
+// Countdown hook
+function useCountdown(expiresAt: string | undefined, isOpen: boolean) {
+  const [timeLeft, setTimeLeft] = useState<string>('');
+  const [isExpired, setIsExpired] = useState(false);
+
+  useEffect(() => {
+    if (!expiresAt || !isOpen) {
+      setTimeLeft('');
+      return;
+    }
+
+    const updateCountdown = () => {
+      const now = Date.now();
+      const expires = new Date(expiresAt).getTime();
+      const diff = expires - now;
+
+      if (diff <= 0) {
+        setTimeLeft('Resolving...');
+        setIsExpired(true);
+        return;
+      }
+
+      setIsExpired(false);
+
+      // Format time remaining
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+      if (hours > 0) {
+        setTimeLeft(`${hours}h ${minutes}m ${seconds}s`);
+      } else if (minutes > 0) {
+        setTimeLeft(`${minutes}m ${seconds}s`);
+      } else {
+        setTimeLeft(`${seconds}s`);
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [expiresAt, isOpen]);
+
+  return { timeLeft, isExpired };
 }
 
 export default function SignalCard({
@@ -43,25 +95,37 @@ export default function SignalCard({
   targetPrice,
   exitPrice,
   status,
+  result, // 'win' | 'lose' | 'push' from backend
   createdAt,
+  expiresAt,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   resolvedAt: _resolvedAt,
   confidence = 80,
+  pnlPercent,
   strategyName,
   index = 0,
   showStrategy = false,
 }: SignalCardProps) {
   const isOpen = status.toLowerCase() === 'open';
-  const isWin = status.toLowerCase().includes('win');
-  const isLoss = status.toLowerCase().includes('loss');
-  const isUp = direction.toLowerCase() === 'up' || direction.toLowerCase() === 'over' || direction.toLowerCase() === 'yes';
+  
+  // Use 'result' field from backend for win/lose determination (not 'status')
+  // 'status' is 'open' | 'resolved' | 'cancelled'
+  // 'result' is 'win' | 'lose' | 'push' (only set when resolved)
+  const isWin = result?.toLowerCase() === 'win';
+  const isLoss = result?.toLowerCase() === 'lose' || result?.toLowerCase() === 'loss';
+  
+  const isUp = direction.toLowerCase() === 'up' || direction.toLowerCase() === 'over' || direction.toLowerCase() === 'yes' || direction.toLowerCase() === 'long';
 
-  // Calculate P&L if resolved
-  const pnl = exitPrice
-    ? isUp
-      ? ((exitPrice - entryPrice) / entryPrice) * 100
-      : ((entryPrice - exitPrice) / entryPrice) * 100
-    : 0;
+  const { timeLeft, isExpired } = useCountdown(expiresAt, isOpen);
+
+  // Calculate P&L if resolved - use pnlPercent from backend if available
+  const pnl = pnlPercent !== undefined
+    ? pnlPercent
+    : exitPrice
+      ? isUp
+        ? ((exitPrice - entryPrice) / entryPrice) * 100
+        : ((entryPrice - exitPrice) / entryPrice) * 100
+      : 0;
 
   const statusConfig = {
     open: {
@@ -143,10 +207,24 @@ export default function SignalCard({
             {showStrategy && strategyName && (
               <p className="text-xs text-slate-400 mt-0.5">{strategyName}</p>
             )}
-            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-              <Clock className="w-3 h-3" />
-              {formatRelativeTime(createdAt)}
-            </p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-xs text-slate-500 flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {formatRelativeTime(createdAt)}
+              </p>
+              {/* Countdown Timer for Open Signals */}
+              {isOpen && timeLeft && (
+                <p className={cn(
+                  "text-xs flex items-center gap-1 px-1.5 py-0.5 rounded",
+                  isExpired
+                    ? "text-yellow-400 bg-yellow-500/20"
+                    : "text-cyan-400 bg-cyan-500/20"
+                )}>
+                  <Timer className="w-3 h-3" />
+                  {timeLeft}
+                </p>
+              )}
+            </div>
           </div>
         </div>
 

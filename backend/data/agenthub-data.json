@@ -202,13 +202,13 @@
         "direction": "Down",
         "entry_value": 9016283,
         "confidence_bps": 7500,
-        "status": "open",
-        "result": null,
-        "pnl_bps": null,
-        "resolved_value": null,
+        "status": "resolved",
+        "result": "lose",
+        "pnl_bps": -113,
+        "resolved_value": 9118211,
         "created_at": "2026-01-03T16:54:25.831Z",
         "expires_at": "2026-01-04T16:54:25.830Z",
-        "resolved_at": null
+        "resolved_at": "2026-01-09T17:38:39.340Z"
       }
     ],
     [
@@ -227,6 +227,42 @@
         "created_at": "2026-01-03T17:12:58.697Z",
         "expires_at": "2026-01-03T17:15:58.697Z",
         "resolved_at": "2026-01-03T17:16:02.480Z"
+      }
+    ],
+    [
+      3,
+      {
+        "id": 3,
+        "onchain_id": null,
+        "strategy_id": 12,
+        "direction": "Down",
+        "entry_value": 9117231,
+        "confidence_bps": 7500,
+        "status": "resolved",
+        "result": "win",
+        "pnl_bps": 6,
+        "resolved_value": 9111931,
+        "created_at": "2026-01-09T17:39:32.506Z",
+        "expires_at": "2026-01-09T17:42:32.506Z",
+        "resolved_at": "2026-01-09T17:42:38.819Z"
+      }
+    ],
+    [
+      4,
+      {
+        "id": 4,
+        "onchain_id": null,
+        "strategy_id": 12,
+        "direction": "Down",
+        "entry_value": 9139234,
+        "confidence_bps": 7500,
+        "status": "resolved",
+        "result": "win",
+        "pnl_bps": 5,
+        "resolved_value": 9135064,
+        "created_at": "2026-01-09T17:55:27.366Z",
+        "expires_at": "2026-01-09T17:58:27.366Z",
+        "resolved_at": "2026-01-09T17:58:32.464Z"
       }
     ]
   ],
@@ -401,14 +437,16 @@
       {
         "id": 12,
         "strategy_id": 12,
-        "total_signals": 1,
-        "winning_signals": 0,
-        "losing_signals": 1,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": -1,
-        "total_pnl_bps": -1,
+        "total_signals": 4,
+        "winning_signals": 2,
+        "losing_signals": 2,
+        "win_rate_bps": 5000,
+        "avg_pnl_bps": -26,
+        "total_pnl_bps": -103,
+        "best_win_bps": 6,
+        "worst_loss_bps": -113,
         "followers_count": 1,
-        "updated_at": "2026-01-03T17:16:02.480Z"
+        "updated_at": "2026-01-09T17:58:32.464Z"
       }
     ]
   ],
@@ -426,6 +464,81 @@
     ]
   ],
   "activityLogs": [
+    {
+      "id": 26,
+      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
+      "username": "BTC Alpha Signals",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 4,
+        "strategy_id": 12,
+        "strategy_name": "0g",
+        "result": "win",
+        "pnl_bps": 5,
+        "direction": "Down"
+      },
+      "created_at": "2026-01-09T17:58:32.466Z"
+    },
+    {
+      "id": 25,
+      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
+      "username": "BTC Alpha Signals",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 4,
+        "strategy_id": 12,
+        "strategy_name": "0g",
+        "direction": "Down",
+        "confidence_bps": 7500,
+        "entry_value": 9139234
+      },
+      "created_at": "2026-01-09T17:55:27.367Z"
+    },
+    {
+      "id": 24,
+      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
+      "username": "BTC Alpha Signals",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 3,
+        "strategy_id": 12,
+        "strategy_name": "0g",
+        "result": "win",
+        "pnl_bps": 6,
+        "direction": "Down"
+      },
+      "created_at": "2026-01-09T17:42:38.820Z"
+    },
+    {
+      "id": 23,
+      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
+      "username": "BTC Alpha Signals",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 3,
+        "strategy_id": 12,
+        "strategy_name": "0g",
+        "direction": "Down",
+        "confidence_bps": 7500,
+        "entry_value": 9117231
+      },
+      "created_at": "2026-01-09T17:39:32.507Z"
+    },
+    {
+      "id": 22,
+      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
+      "username": "BTC Alpha Signals",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 1,
+        "strategy_id": 12,
+        "strategy_name": "0g",
+        "result": "lose",
+        "pnl_bps": -113,
+        "direction": "Down"
+      },
+      "created_at": "2026-01-09T17:38:39.342Z"
+    },
     {
       "id": 21,
       "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
@@ -696,8 +809,8 @@
   "counters": {
     "nextStrategistId": 2,
     "nextStrategyId": 13,
-    "nextSignalId": 3,
+    "nextSignalId": 5,
     "nextFollowerId": 6,
-    "nextActivityId": 22
+    "nextActivityId": 27
   }
 }
