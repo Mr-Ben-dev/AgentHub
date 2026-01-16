@@ -33,6 +33,7 @@ const PublishSignalSchema = z.object({
   horizon_secs: z.number().int().positive(), // No max limit for testing
   confidence_bps: z.number().int().min(0).max(10000),
   entry_value: z.number().int().positive().optional(),
+  asset: z.string().optional(),  // e.g., 'BTC/USD', 'ETH/USD'
 });
 
 const FollowStrategySchema = z.object({
@@ -326,9 +327,11 @@ export function createApiRouter(db: Database): Router {
       }
 
       // Get entry value (current price for crypto)
+      // Use the asset from input if provided, otherwise fall back to strategy's base_market
       let entryValue = input.entry_value;
+      const signalAsset = input.asset || strategy.base_market;
       if (!entryValue && strategy.market_kind.toLowerCase() === 'crypto') {
-        const asset = extractAssetFromMarket(strategy.base_market);
+        const asset = extractAssetFromMarket(signalAsset);
         if (asset) {
           const price = await getPrice(asset);
           entryValue = price.price;
@@ -345,6 +348,7 @@ export function createApiRouter(db: Database): Router {
         entry_value: entryValue,
         confidence_bps: input.confidence_bps,
         expires_at: expiresAt,
+        asset: signalAsset,  // Store the actual asset for this signal
       });
 
       // Log activity

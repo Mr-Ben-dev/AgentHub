@@ -278,6 +278,7 @@ export const memoryDb: Database = {
       result: null,
       pnl_bps: null,
       resolved_value: null,
+      asset: input.asset || null,
       created_at: new Date(),
       expires_at: input.expires_at,
       resolved_at: null,

@@ -506,6 +506,7 @@ function CreateAgentModal({
     name: '',
     description: '',
     marketKind: 'Crypto',
+    baseMarket: 'BTC/USD',
     isPublic: true,
   });
 
@@ -554,7 +555,7 @@ function CreateAgentModal({
           name: formData.name,
           description: formData.description,
           marketKind: formData.marketKind,  // "Crypto" | "Sports" | "PredictionApp"
-          baseMarket: formData.marketKind === 'Crypto' ? 'BTC/USD' : 'General',  // Default base market
+          baseMarket: formData.marketKind === 'Crypto' ? formData.baseMarket : 'General',
           isPublic: formData.isPublic,
           isAiControlled: true,  // This is AgentHub so agents are AI-controlled
         });
@@ -595,7 +596,7 @@ function CreateAgentModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-strategies', wallet] });
       queryClient.invalidateQueries({ queryKey: ['strategies'] });
-      setFormData({ name: '', description: '', marketKind: 'Crypto', isPublic: true });
+      setFormData({ name: '', description: '', marketKind: 'Crypto', baseMarket: 'BTC/USD', isPublic: true });
       setStep('form');
       onClose();
     },
@@ -715,6 +716,47 @@ function CreateAgentModal({
                   ))}
                 </div>
               </div>
+
+              {/* Base Market Selection - Only for Crypto */}
+              {formData.marketKind === 'Crypto' && (
+                <div>
+                  <label className="text-sm text-slate-400 mb-3 block">Trading Pair</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setFormData({ ...formData, baseMarket: 'BTC/USD' })}
+                      type="button"
+                      className={cn(
+                        'flex items-center justify-center gap-2 p-3 rounded-xl border transition-all',
+                        formData.baseMarket === 'BTC/USD'
+                          ? 'bg-gradient-to-br from-orange-500/20 to-yellow-500/20 border-orange-500/50 text-orange-400'
+                          : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                      )}
+                    >
+                      <Bitcoin className="w-5 h-5" />
+                      <span className="font-medium">BTC/USD</span>
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => setFormData({ ...formData, baseMarket: 'ETH/USD' })}
+                      type="button"
+                      className={cn(
+                        'flex items-center justify-center gap-2 p-3 rounded-xl border transition-all',
+                        formData.baseMarket === 'ETH/USD'
+                          ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-blue-500/50 text-blue-400'
+                          : 'bg-slate-800/50 border-slate-700/50 text-slate-400 hover:border-slate-600'
+                      )}
+                    >
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.944 17.97L4.58 13.62 11.943 24l7.37-10.38-7.372 4.35h.003zM12.056 0L4.69 12.223l7.365 4.354 7.365-4.35L12.056 0z"/>
+                      </svg>
+                      <span className="font-medium">ETH/USD</span>
+                    </motion.button>
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center gap-3 p-4 rounded-xl bg-slate-800/30 border border-slate-700/30">
                 <motion.button

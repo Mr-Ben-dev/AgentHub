@@ -198,6 +198,7 @@ export const api = {
     name: string;
     description: string;
     marketKind: string;
+    baseMarket?: string;
     isPublic: boolean;
     creatorWallet: string;
   }) => fetchApi<AgentStrategy>('/strategies', { 
@@ -207,7 +208,7 @@ export const api = {
       name: data.name,
       description: data.description,
       market_kind: data.marketKind,
-      base_market: data.marketKind === 'Crypto' ? 'BTC-USD' : 'General',
+      base_market: data.baseMarket || (data.marketKind === 'Crypto' ? 'BTC-USD' : 'General'),
       is_public: data.isPublic,
       is_ai_controlled: false,
     }) 
@@ -234,6 +235,7 @@ export const api = {
     horizonSecs: number;
     confidenceBps: number;  // 0-10000
     entryValue?: number;
+    asset?: string;  // 'BTC/USD' | 'ETH/USD'
   }) => fetchApi<Signal>('/signals', { 
     method: 'POST', 
     body: JSON.stringify({
@@ -243,6 +245,7 @@ export const api = {
       horizon_secs: data.horizonSecs,
       confidence_bps: data.confidenceBps,
       entry_value: data.entryValue,
+      asset: data.asset,
     })
   }),
 

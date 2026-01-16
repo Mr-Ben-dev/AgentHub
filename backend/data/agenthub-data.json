@@ -111,6 +111,62 @@
         "expires_at": "2026-01-17T05:01:39.567Z",
         "resolved_at": null
       }
+    ],
+    [
+      3,
+      {
+        "id": 3,
+        "onchain_id": null,
+        "strategy_id": 1,
+        "direction": "Up",
+        "entry_value": 9559500,
+        "confidence_bps": 7500,
+        "status": "resolved",
+        "result": "lose",
+        "pnl_bps": -3,
+        "resolved_value": 9557000,
+        "created_at": "2026-01-16T05:51:00.149Z",
+        "expires_at": "2026-01-16T05:54:00.149Z",
+        "resolved_at": "2026-01-16T05:54:09.611Z"
+      }
+    ],
+    [
+      5,
+      {
+        "id": 5,
+        "onchain_id": null,
+        "strategy_id": 1,
+        "direction": "Up",
+        "entry_value": 330646,
+        "confidence_bps": 7500,
+        "status": "open",
+        "result": null,
+        "pnl_bps": null,
+        "resolved_value": null,
+        "asset": "ETH",
+        "created_at": "2026-01-16T06:09:30.514Z",
+        "expires_at": "2026-01-17T06:09:30.514Z",
+        "resolved_at": null
+      }
+    ],
+    [
+      6,
+      {
+        "id": 6,
+        "onchain_id": null,
+        "strategy_id": 1,
+        "direction": "Up",
+        "entry_value": 330646,
+        "confidence_bps": 7500,
+        "status": "resolved",
+        "result": "lose",
+        "pnl_bps": -8,
+        "resolved_value": 330381,
+        "asset": "ETH",
+        "created_at": "2026-01-16T06:09:43.002Z",
+        "expires_at": "2026-01-16T06:12:43.002Z",
+        "resolved_at": "2026-01-16T06:12:52.419Z"
+      }
     ]
   ],
   "strategyStats": [
@@ -119,16 +175,16 @@
       {
         "id": 1,
         "strategy_id": 1,
-        "total_signals": 1,
+        "total_signals": 4,
         "winning_signals": 0,
-        "losing_signals": 0,
+        "losing_signals": 2,
         "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
+        "avg_pnl_bps": -5,
+        "total_pnl_bps": -11,
         "best_win_bps": 0,
-        "worst_loss_bps": 0,
+        "worst_loss_bps": -8,
         "followers_count": 1,
-        "updated_at": "2026-01-16T04:48:23.051Z"
+        "updated_at": "2026-01-16T06:12:52.419Z"
       }
     ],
     [
@@ -202,6 +258,111 @@
     ]
   ],
   "activityLogs": [
+    {
+      "id": 17,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 6,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "result": "lose",
+        "pnl_bps": -8,
+        "direction": "Up"
+      },
+      "created_at": "2026-01-16T06:12:52.421Z"
+    },
+    {
+      "id": 16,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 6,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 330646
+      },
+      "created_at": "2026-01-16T06:09:43.002Z"
+    },
+    {
+      "id": 15,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 5,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 330646
+      },
+      "created_at": "2026-01-16T06:09:30.514Z"
+    },
+    {
+      "id": 14,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 4,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "result": "win",
+        "pnl_bps": 279156,
+        "direction": "Up"
+      },
+      "created_at": "2026-01-16T06:04:43.592Z"
+    },
+    {
+      "id": 13,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 4,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 330794
+      },
+      "created_at": "2026-01-16T06:01:43.538Z"
+    },
+    {
+      "id": 12,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 3,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "result": "lose",
+        "pnl_bps": -3,
+        "direction": "Up"
+      },
+      "created_at": "2026-01-16T05:54:09.616Z"
+    },
+    {
+      "id": 11,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 3,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 9559500
+      },
+      "created_at": "2026-01-16T05:51:00.150Z"
+    },
     {
       "id": 10,
       "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
@@ -328,8 +489,8 @@
   "counters": {
     "nextStrategistId": 3,
     "nextStrategyId": 4,
-    "nextSignalId": 3,
+    "nextSignalId": 7,
     "nextFollowerId": 4,
-    "nextActivityId": 11
+    "nextActivityId": 18
   }
 }

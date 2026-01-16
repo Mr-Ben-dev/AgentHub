@@ -40,6 +40,7 @@ import {
   X,
   Zap,
   Send,
+  CircleDollarSign,
 } from 'lucide-react';
 import {
   cn,
@@ -72,6 +73,7 @@ export default function AgentDetailPage() {
     direction: 'Long' as 'Long' | 'Short',
     confidence: 75,
     horizonHours: 24,
+    asset: 'BTC' as 'BTC' | 'ETH',
   });
   const [onChainError, setOnChainError] = useState<string | null>(null);
 
@@ -207,6 +209,7 @@ export default function AgentDetailPage() {
         direction: backendDirection,
         horizonSecs,
         confidenceBps,
+        asset: signalForm.asset,  // Pass the selected asset (BTC/USD or ETH/USD)
       });
       
       return signalId;
@@ -645,6 +648,37 @@ export default function AgentDetailPage() {
 
               {/* Form */}
               <div className="p-6 space-y-6">
+                {/* Asset Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-3">Asset</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setSignalForm(f => ({ ...f, asset: 'BTC' }))}
+                      className={cn(
+                        'flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold transition-all',
+                        signalForm.asset === 'BTC'
+                          ? 'border-orange-500 bg-orange-500/20 text-orange-400'
+                          : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
+                      )}
+                    >
+                      <Bitcoin className="w-5 h-5" />
+                      BTC/USD
+                    </button>
+                    <button
+                      onClick={() => setSignalForm(f => ({ ...f, asset: 'ETH' }))}
+                      className={cn(
+                        'flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 font-semibold transition-all',
+                        signalForm.asset === 'ETH'
+                          ? 'border-purple-500 bg-purple-500/20 text-purple-400'
+                          : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
+                      )}
+                    >
+                      <CircleDollarSign className="w-5 h-5" />
+                      ETH/USD
+                    </button>
+                  </div>
+                </div>
+
                 {/* Direction */}
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-3">Direction</label>
@@ -730,7 +764,7 @@ export default function AgentDetailPage() {
                     <span className={signalForm.direction === 'Long' ? 'text-emerald-400' : 'text-red-400'}>
                       {signalForm.direction === 'Long' ? '📈 LONG' : '📉 SHORT'}
                     </span>
-                    {' '}on {strategyData?.strategy?.marketKind === 'Crypto' ? 'BTC-USD' : 'Market'}
+                    {' '}on <span className="text-yellow-400">{signalForm.asset}/USD</span>
                     {' '}with <span className="text-cyan-400">{signalForm.confidence}%</span> confidence
                     {' '}for <span className="text-purple-400">
                       {signalForm.horizonHours < 1 

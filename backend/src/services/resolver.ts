@@ -70,14 +70,17 @@ async function resolveExpiredSignals(db: Database, io: SocketIOServer): Promise<
         continue;
       }
 
-      // Extract asset from base_market
-      const asset = extractAssetFromMarket(strategy.base_market);
+      // Extract asset from signal.asset (if set) or fallback to strategy.base_market
+      const signalAsset = signal.asset || strategy.base_market;
+      const asset = extractAssetFromMarket(signalAsset);
       if (!asset) {
-        console.warn(`Could not extract asset from ${strategy.base_market}`);
+        console.warn(`Could not extract asset from ${signalAsset}`);
         continue;
       }
 
-      // Get current price
+      console.log(`📊 Resolving signal ${signal.id} with asset ${asset} (from ${signalAsset})`);
+
+      // Get current price for the correct asset
       const price = await getPrice(asset);
       if (price.price === 0) {
         console.warn(`Could not get price for ${asset}`);

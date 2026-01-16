@@ -38,6 +38,7 @@ export interface Signal {
   result: SignalResult | null;
   pnl_bps: number | null;
   resolved_value: number | null;
+  asset: string | null;  // e.g., 'BTC/USD', 'ETH/USD' - the actual asset for this signal
   created_at: Date;
   expires_at: Date;
   resolved_at: Date | null;
@@ -104,6 +105,7 @@ export interface CreateSignalInput {
   entry_value?: number;
   confidence_bps: number;
   expires_at: Date;
+  asset?: string;  // e.g., 'BTC/USD', 'ETH/USD'
 }
 
 export interface ResolveSignalInput {
