@@ -1,12 +1,30 @@
 {
   "strategists": [
     [
-      "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
+      "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
       {
         "id": 1,
-        "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "display_name": "BTC Alpha Signals",
-        "created_at": "2026-01-01T05:02:15.930Z"
+        "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+        "display_name": "nomk",
+        "created_at": "2026-01-16T02:50:08.647Z"
+      }
+    ],
+    [
+      "0x3fd0dc73c6055e1c4ad91dab26084cca2f1fcad9",
+      {
+        "id": 1,
+        "wallet_address": "0x3fd0dc73c6055e1c4ad91dab26084cca2f1fcad9",
+        "display_name": "homl",
+        "created_at": "2026-01-16T04:06:55.051Z"
+      }
+    ],
+    [
+      "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      {
+        "id": 2,
+        "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+        "display_name": "COOL",
+        "created_at": "2026-01-16T04:46:48.278Z"
       }
     ]
   ],
@@ -15,15 +33,15 @@
       1,
       {
         "id": 1,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "BTC Alpha Signals",
-        "description": "btc",
+        "onchain_id": 6,
+        "owner_wallet": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+        "name": "BTC strategies ",
+        "description": "BTC",
         "market_kind": "Crypto",
         "base_market": "BTC-USD",
         "is_public": true,
         "is_ai_controlled": false,
-        "created_at": "2026-01-01T05:06:52.353Z"
+        "created_at": "2026-01-16T04:00:09.205Z"
       }
     ],
     [
@@ -31,164 +49,29 @@
       {
         "id": 2,
         "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "ETH Alpha Signals",
-        "description": "ETH",
+        "owner_wallet": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+        "name": "KING BTC ",
+        "description": "KING",
         "market_kind": "Crypto",
         "base_market": "BTC-USD",
         "is_public": true,
         "is_ai_controlled": false,
-        "created_at": "2026-01-01T05:15:25.119Z"
+        "created_at": "2026-01-16T04:47:46.063Z"
       }
     ],
     [
       3,
       {
         "id": 3,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "btc Signals dev",
-        "description": "btc",
+        "onchain_id": 1,
+        "owner_wallet": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+        "name": "BTC KING 2",
+        "description": "KING 2",
         "market_kind": "Crypto",
         "base_market": "BTC-USD",
         "is_public": true,
         "is_ai_controlled": false,
-        "created_at": "2026-01-01T05:37:28.115Z"
-      }
-    ],
-    [
-      4,
-      {
-        "id": 4,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "aaa",
-        "description": "a",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-01T05:44:54.263Z"
-      }
-    ],
-    [
-      5,
-      {
-        "id": 5,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "sol ",
-        "description": "sol",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-01T05:51:47.787Z"
-      }
-    ],
-    [
-      6,
-      {
-        "id": 6,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "ade",
-        "description": "dad",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-01T06:02:48.517Z"
-      }
-    ],
-    [
-      7,
-      {
-        "id": 7,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "mok",
-        "description": "mn",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-01T06:13:37.462Z"
-      }
-    ],
-    [
-      8,
-      {
-        "id": 8,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "molk",
-        "description": "mjkh",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-01T06:14:44.014Z"
-      }
-    ],
-    [
-      9,
-      {
-        "id": 9,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "mkhf",
-        "description": "gggg",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-01T06:18:40.216Z"
-      }
-    ],
-    [
-      10,
-      {
-        "id": 10,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "sui btc",
-        "description": "btc",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-03T15:42:58.697Z"
-      }
-    ],
-    [
-      11,
-      {
-        "id": 11,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "btc fol",
-        "description": "btc",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-03T15:46:20.149Z"
-      }
-    ],
-    [
-      12,
-      {
-        "id": 12,
-        "onchain_id": null,
-        "owner_wallet": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-        "name": "0g",
-        "description": "0g",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD",
-        "is_public": true,
-        "is_ai_controlled": false,
-        "created_at": "2026-01-03T15:47:25.957Z"
+        "created_at": "2026-01-16T05:00:25.131Z"
       }
     ]
   ],
@@ -198,17 +81,17 @@
       {
         "id": 1,
         "onchain_id": null,
-        "strategy_id": 12,
-        "direction": "Down",
-        "entry_value": 9016283,
+        "strategy_id": 1,
+        "direction": "Up",
+        "entry_value": 9531423,
         "confidence_bps": 7500,
-        "status": "resolved",
-        "result": "lose",
-        "pnl_bps": -113,
-        "resolved_value": 9118211,
-        "created_at": "2026-01-03T16:54:25.831Z",
-        "expires_at": "2026-01-04T16:54:25.830Z",
-        "resolved_at": "2026-01-09T17:38:39.340Z"
+        "status": "open",
+        "result": null,
+        "pnl_bps": null,
+        "resolved_value": null,
+        "created_at": "2026-01-16T04:01:32.823Z",
+        "expires_at": "2026-01-17T04:01:32.823Z",
+        "resolved_at": null
       }
     ],
     [
@@ -216,53 +99,17 @@
       {
         "id": 2,
         "onchain_id": null,
-        "strategy_id": 12,
+        "strategy_id": 3,
         "direction": "Up",
-        "entry_value": 9002923,
+        "entry_value": 9536902,
         "confidence_bps": 7500,
-        "status": "resolved",
-        "result": "lose",
-        "pnl_bps": -1,
-        "resolved_value": 9002210,
-        "created_at": "2026-01-03T17:12:58.697Z",
-        "expires_at": "2026-01-03T17:15:58.697Z",
-        "resolved_at": "2026-01-03T17:16:02.480Z"
-      }
-    ],
-    [
-      3,
-      {
-        "id": 3,
-        "onchain_id": null,
-        "strategy_id": 12,
-        "direction": "Down",
-        "entry_value": 9117231,
-        "confidence_bps": 7500,
-        "status": "resolved",
-        "result": "win",
-        "pnl_bps": 6,
-        "resolved_value": 9111931,
-        "created_at": "2026-01-09T17:39:32.506Z",
-        "expires_at": "2026-01-09T17:42:32.506Z",
-        "resolved_at": "2026-01-09T17:42:38.819Z"
-      }
-    ],
-    [
-      4,
-      {
-        "id": 4,
-        "onchain_id": null,
-        "strategy_id": 12,
-        "direction": "Down",
-        "entry_value": 9139234,
-        "confidence_bps": 7500,
-        "status": "resolved",
-        "result": "win",
-        "pnl_bps": 5,
-        "resolved_value": 9135064,
-        "created_at": "2026-01-09T17:55:27.366Z",
-        "expires_at": "2026-01-09T17:58:27.366Z",
-        "resolved_at": "2026-01-09T17:58:32.464Z"
+        "status": "open",
+        "result": null,
+        "pnl_bps": null,
+        "resolved_value": null,
+        "created_at": "2026-01-16T05:01:39.568Z",
+        "expires_at": "2026-01-17T05:01:39.567Z",
+        "resolved_at": null
       }
     ]
   ],
@@ -272,14 +119,16 @@
       {
         "id": 1,
         "strategy_id": 1,
-        "total_signals": 0,
+        "total_signals": 1,
         "winning_signals": 0,
         "losing_signals": 0,
         "win_rate_bps": 0,
         "avg_pnl_bps": 0,
         "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T05:06:52.353Z"
+        "best_win_bps": 0,
+        "worst_loss_bps": 0,
+        "followers_count": 1,
+        "updated_at": "2026-01-16T04:48:23.051Z"
       }
     ],
     [
@@ -293,8 +142,10 @@
         "win_rate_bps": 0,
         "avg_pnl_bps": 0,
         "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T05:15:25.119Z"
+        "best_win_bps": 0,
+        "worst_loss_bps": 0,
+        "followers_count": 1,
+        "updated_at": "2026-01-16T05:09:12.492Z"
       }
     ],
     [
@@ -302,515 +153,183 @@
       {
         "id": 3,
         "strategy_id": 3,
-        "total_signals": 0,
+        "total_signals": 1,
         "winning_signals": 0,
         "losing_signals": 0,
         "win_rate_bps": 0,
         "avg_pnl_bps": 0,
         "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T05:37:28.115Z"
-      }
-    ],
-    [
-      4,
-      {
-        "id": 4,
-        "strategy_id": 4,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T05:44:54.263Z"
-      }
-    ],
-    [
-      5,
-      {
-        "id": 5,
-        "strategy_id": 5,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T05:51:47.787Z"
-      }
-    ],
-    [
-      6,
-      {
-        "id": 6,
-        "strategy_id": 6,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T06:02:48.517Z"
-      }
-    ],
-    [
-      7,
-      {
-        "id": 7,
-        "strategy_id": 7,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T06:13:37.462Z"
-      }
-    ],
-    [
-      8,
-      {
-        "id": 8,
-        "strategy_id": 8,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T06:14:44.014Z"
-      }
-    ],
-    [
-      9,
-      {
-        "id": 9,
-        "strategy_id": 9,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-01T06:18:40.216Z"
-      }
-    ],
-    [
-      10,
-      {
-        "id": 10,
-        "strategy_id": 10,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-03T15:42:58.697Z"
-      }
-    ],
-    [
-      11,
-      {
-        "id": 11,
-        "strategy_id": 11,
-        "total_signals": 0,
-        "winning_signals": 0,
-        "losing_signals": 0,
-        "win_rate_bps": 0,
-        "avg_pnl_bps": 0,
-        "total_pnl_bps": 0,
-        "followers_count": 0,
-        "updated_at": "2026-01-03T15:46:20.149Z"
-      }
-    ],
-    [
-      12,
-      {
-        "id": 12,
-        "strategy_id": 12,
-        "total_signals": 4,
-        "winning_signals": 2,
-        "losing_signals": 2,
-        "win_rate_bps": 5000,
-        "avg_pnl_bps": -26,
-        "total_pnl_bps": -103,
-        "best_win_bps": 6,
-        "worst_loss_bps": -113,
+        "best_win_bps": 0,
+        "worst_loss_bps": 0,
         "followers_count": 1,
-        "updated_at": "2026-01-09T17:58:32.464Z"
+        "updated_at": "2026-01-16T05:03:11.836Z"
       }
     ]
   ],
   "followers": [
     [
-      "12-0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
+      "1-0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
       {
-        "id": 5,
-        "strategy_id": 12,
-        "wallet_address": "0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
+        "id": 1,
+        "strategy_id": 1,
+        "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
         "auto_copy": false,
         "max_exposure_units": 0,
-        "created_at": "2026-01-03T16:25:23.204Z"
+        "created_at": "2026-01-16T04:48:23.051Z"
+      }
+    ],
+    [
+      "3-0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      {
+        "id": 2,
+        "strategy_id": 3,
+        "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+        "auto_copy": false,
+        "max_exposure_units": 0,
+        "created_at": "2026-01-16T05:03:11.836Z"
+      }
+    ],
+    [
+      "2-0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      {
+        "id": 3,
+        "strategy_id": 2,
+        "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+        "auto_copy": false,
+        "max_exposure_units": 0,
+        "created_at": "2026-01-16T05:09:12.492Z"
       }
     ]
   ],
   "activityLogs": [
     {
-      "id": 26,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_RESOLVED",
-      "details": {
-        "signal_id": 4,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "result": "win",
-        "pnl_bps": 5,
-        "direction": "Down"
-      },
-      "created_at": "2026-01-09T17:58:32.466Z"
-    },
-    {
-      "id": 25,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_PUBLISHED",
-      "details": {
-        "signal_id": 4,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "direction": "Down",
-        "confidence_bps": 7500,
-        "entry_value": 9139234
-      },
-      "created_at": "2026-01-09T17:55:27.367Z"
-    },
-    {
-      "id": 24,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_RESOLVED",
-      "details": {
-        "signal_id": 3,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "result": "win",
-        "pnl_bps": 6,
-        "direction": "Down"
-      },
-      "created_at": "2026-01-09T17:42:38.820Z"
-    },
-    {
-      "id": 23,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_PUBLISHED",
-      "details": {
-        "signal_id": 3,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "direction": "Down",
-        "confidence_bps": 7500,
-        "entry_value": 9117231
-      },
-      "created_at": "2026-01-09T17:39:32.507Z"
-    },
-    {
-      "id": 22,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_RESOLVED",
-      "details": {
-        "signal_id": 1,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "result": "lose",
-        "pnl_bps": -113,
-        "direction": "Down"
-      },
-      "created_at": "2026-01-09T17:38:39.342Z"
-    },
-    {
-      "id": 21,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_RESOLVED",
-      "details": {
-        "signal_id": 2,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "result": "lose",
-        "pnl_bps": -1,
-        "direction": "Up"
-      },
-      "created_at": "2026-01-03T17:16:02.482Z"
-    },
-    {
-      "id": 20,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_PUBLISHED",
-      "details": {
-        "signal_id": 2,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "direction": "Up",
-        "confidence_bps": 7500,
-        "entry_value": 9002923
-      },
-      "created_at": "2026-01-03T17:12:58.698Z"
-    },
-    {
-      "id": 19,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "SIGNAL_PUBLISHED",
-      "details": {
-        "signal_id": 1,
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "direction": "Down",
-        "confidence_bps": 7500,
-        "entry_value": 9016283
-      },
-      "created_at": "2026-01-03T16:54:25.832Z"
-    },
-    {
-      "id": 18,
-      "wallet_address": "0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
-      "username": "User",
-      "action": "STRATEGY_FOLLOWED",
-      "details": {
-        "strategy_id": 12,
-        "strategy_name": "0g"
-      },
-      "created_at": "2026-01-03T16:25:23.206Z"
-    },
-    {
-      "id": 17,
-      "wallet_address": "0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
-      "username": "User",
-      "action": "STRATEGY_FOLLOWED",
-      "details": {
-        "strategy_id": 12,
-        "strategy_name": "0g"
-      },
-      "created_at": "2026-01-03T16:13:15.163Z"
-    },
-    {
-      "id": 16,
-      "wallet_address": "0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
-      "username": "User",
-      "action": "STRATEGY_FOLLOWED",
-      "details": {
-        "strategy_id": 12,
-        "strategy_name": "0g"
-      },
-      "created_at": "2026-01-03T16:13:01.559Z"
-    },
-    {
-      "id": 15,
-      "wallet_address": "0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
-      "username": "User",
-      "action": "STRATEGY_FOLLOWED",
-      "details": {
-        "strategy_id": 12,
-        "strategy_name": "0g"
-      },
-      "created_at": "2026-01-03T16:12:34.521Z"
-    },
-    {
-      "id": 14,
-      "wallet_address": "0x37a957b80456693b5036d274b620dfe6b1cc0ac4",
-      "username": "User",
-      "action": "STRATEGY_FOLLOWED",
-      "details": {
-        "strategy_id": 12,
-        "strategy_name": "0g"
-      },
-      "created_at": "2026-01-03T16:07:33.436Z"
-    },
-    {
-      "id": 13,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
-      "details": {
-        "strategy_id": 12,
-        "strategy_name": "0g",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
-      },
-      "created_at": "2026-01-03T15:47:25.958Z"
-    },
-    {
-      "id": 12,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
-      "details": {
-        "strategy_id": 11,
-        "strategy_name": "btc fol",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
-      },
-      "created_at": "2026-01-03T15:46:20.150Z"
-    },
-    {
-      "id": 11,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
-      "details": {
-        "strategy_id": 10,
-        "strategy_name": "sui btc",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
-      },
-      "created_at": "2026-01-03T15:42:58.698Z"
-    },
-    {
       "id": 10,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "STRATEGY_FOLLOWED",
       "details": {
-        "strategy_id": 9,
-        "strategy_name": "mkhf",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
+        "strategy_id": 2,
+        "strategy_name": "KING BTC "
       },
-      "created_at": "2026-01-01T06:18:40.216Z"
+      "created_at": "2026-01-16T05:09:12.493Z"
     },
     {
       "id": 9,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "STRATEGY_FOLLOWED",
       "details": {
-        "strategy_id": 8,
-        "strategy_name": "molk",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
+        "strategy_id": 3,
+        "strategy_name": "BTC KING 2"
       },
-      "created_at": "2026-01-01T06:14:44.015Z"
+      "created_at": "2026-01-16T05:03:11.837Z"
     },
     {
       "id": 8,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "SIGNAL_PUBLISHED",
       "details": {
-        "strategy_id": 7,
-        "strategy_name": "mok",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
+        "signal_id": 2,
+        "strategy_id": 3,
+        "strategy_name": "BTC KING 2",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 9536902
       },
-      "created_at": "2026-01-01T06:13:37.463Z"
+      "created_at": "2026-01-16T05:01:39.569Z"
     },
     {
       "id": 7,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
-      "details": {
-        "strategy_id": 6,
-        "strategy_name": "ade",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
-      },
-      "created_at": "2026-01-01T06:02:48.518Z"
-    },
-    {
-      "id": 6,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
-      "details": {
-        "strategy_id": 5,
-        "strategy_name": "sol ",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
-      },
-      "created_at": "2026-01-01T05:51:47.787Z"
-    },
-    {
-      "id": 5,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
-      "details": {
-        "strategy_id": 4,
-        "strategy_name": "aaa",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
-      },
-      "created_at": "2026-01-01T05:44:54.263Z"
-    },
-    {
-      "id": 4,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
       "action": "STRATEGY_CREATED",
       "details": {
         "strategy_id": 3,
-        "strategy_name": "btc Signals dev",
+        "strategy_name": "BTC KING 2",
         "market_kind": "Crypto",
         "base_market": "BTC-USD"
       },
-      "created_at": "2026-01-01T05:37:28.116Z"
+      "created_at": "2026-01-16T05:00:25.132Z"
     },
     {
-      "id": 3,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
+      "id": 6,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "STRATEGY_FOLLOWED",
+      "details": {
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies "
+      },
+      "created_at": "2026-01-16T04:48:23.052Z"
+    },
+    {
+      "id": 5,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
       "action": "STRATEGY_CREATED",
       "details": {
         "strategy_id": 2,
-        "strategy_name": "ETH Alpha Signals",
+        "strategy_name": "KING BTC ",
         "market_kind": "Crypto",
         "base_market": "BTC-USD"
       },
-      "created_at": "2026-01-01T05:15:25.119Z"
+      "created_at": "2026-01-16T04:47:46.063Z"
+    },
+    {
+      "id": 4,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "STRATEGIST_REGISTERED",
+      "details": {
+        "display_name": "COOL"
+      },
+      "created_at": "2026-01-16T04:46:48.279Z"
+    },
+    {
+      "id": 3,
+      "wallet_address": "0x3fd0dc73c6055e1c4ad91dab26084cca2f1fcad9",
+      "username": "homl",
+      "action": "STRATEGIST_REGISTERED",
+      "details": {
+        "display_name": "homl"
+      },
+      "created_at": "2026-01-16T04:06:55.051Z"
     },
     {
       "id": 2,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGY_CREATED",
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_PUBLISHED",
       "details": {
+        "signal_id": 1,
         "strategy_id": 1,
-        "strategy_name": "BTC Alpha Signals",
-        "market_kind": "Crypto",
-        "base_market": "BTC-USD"
+        "strategy_name": "BTC strategies ",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 9531423
       },
-      "created_at": "2026-01-01T05:06:52.353Z"
+      "created_at": "2026-01-16T04:01:32.824Z"
     },
     {
       "id": 1,
-      "wallet_address": "0x72f5cc029b361b60f6986ee2679b5be8e0f34837",
-      "username": "BTC Alpha Signals",
-      "action": "STRATEGIST_REGISTERED",
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "STRATEGY_CREATED",
       "details": {
-        "display_name": "BTC Alpha Signals"
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "market_kind": "Crypto",
+        "base_market": "BTC-USD"
       },
-      "created_at": "2026-01-01T05:02:15.930Z"
+      "created_at": "2026-01-16T04:00:09.206Z"
     }
   ],
   "counters": {
-    "nextStrategistId": 2,
-    "nextStrategyId": 13,
-    "nextSignalId": 5,
-    "nextFollowerId": 6,
-    "nextActivityId": 27
+    "nextStrategistId": 3,
+    "nextStrategyId": 4,
+    "nextSignalId": 3,
+    "nextFollowerId": 4,
+    "nextActivityId": 11
   }
 }

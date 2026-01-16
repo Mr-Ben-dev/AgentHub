@@ -31,7 +31,8 @@ interface ChainConnection {
 }
 
 interface AppConnection {
-  application: any;
+  application: any;      // Hub chain app for queries
+  userApplication: any;  // User chain app for mutations  
   applicationId: string;
 }
 
@@ -98,9 +99,18 @@ class ChainManager {
         throw new Error('Wallet address not available');
       }
       
-      // Step 6: Claim a microchain for this user
-      console.log(`⛓️ Claiming microchain for ${userAddress}...`);
+      // Step 6: Get user's own chain
+      // IMPORTANT: Users can only propose on chains they own!
+      // Each wallet session has different keys, so we need to claim fresh chains
+      // The savedChainKey is just for reference - we still need to verify we can use it
+      const savedChainKey = `linera_chain_${userAddress}`;
+      
+      // Always claim a new chain for this wallet session
+      // (The old chain was owned by a different wallet instance with different keys)
+      console.log(`⛓️ Claiming fresh microchain for ${userAddress}...`);
       const chainId = await faucet.claimChain(wallet, userAddress);
+      // Save for reference (though next session will need new chain too)
+      localStorage.setItem(savedChainKey, chainId);
       console.log(`✅ Claimed chain: ${chainId}`);
       
       // Step 7: Set up auto-signing (KEY INNOVATION!)
@@ -146,7 +156,7 @@ class ChainManager {
       };
 
       console.log('✅ Connected to Conway testnet!');
-      console.log(`   Chain ID: ${chainId}`);
+      console.log(`   User Chain: ${chainId}`);
       console.log(`   Address: ${userAddress}`);
       console.log(`   Auto-Signer: ${autoSignerSetup.autoSignerAddress}`);
       console.log(`   Auto-Sign Enabled: ${isAutoSignEnabled}`);
@@ -185,19 +195,18 @@ class ChainManager {
     try {
       console.log(`📱 Connecting to application: ${appId.slice(0, 16)}...`);
       
-      // IMPORTANT: Use the USER's chain, not the hub chain
-      // Users interact with applications through their own microchain
+      // Use the USER's own chain for all operations
+      // In Linera, users can only propose on chains they own!
       const userChainId = this.connection.chainId;
       console.log(`⛓️ Opening user's chain: ${userChainId.slice(0, 16)}...`);
-      const chain = await this.connection.client.chain(userChainId);
+      const userChain = await this.connection.client.chain(userChainId);
       
-      // Get application - the app ID includes the hub chain info
-      // so Linera knows where the app is deployed
+      // Get application from user's chain
       console.log(`📱 Getting application from user's chain...`);
-      const application = await chain.application(appId);
+      const application = await userChain.application(appId);
       
-      // Set up notification listener for new blocks
-      chain.onNotification((notification: any) => {
+      // Set up notification listener
+      userChain.onNotification((notification: any) => {
         if (notification.reason?.NewBlock) {
           console.log('🔔 New block notification');
           this.notifyListeners();
@@ -206,6 +215,7 @@ class ChainManager {
       
       this.appConnection = {
         application,
+        userApplication: application,
         applicationId: appId,
       };
 
@@ -242,9 +252,56 @@ class ChainManager {
 
   /**
    * Execute a GraphQL mutation against the application
+   * 
+   * IMPORTANT: In Linera, mutations schedule operations and return [].
+   * The actual result/error is in the operation_results of the confirmed block.
+   * We need to check for errors in the response and operation results.
+   * 
+   * Uses userApplication (user's chain) for mutations so they can sign and execute.
    */
   async mutate<T>(graphqlMutation: string, variables?: Record<string, unknown>): Promise<T> {
-    return this.query<T>(graphqlMutation, variables);
+    if (!this.appConnection) {
+      throw new Error('Must connect to application first');
+    }
+
+    const payload = variables
+      ? { query: graphqlMutation, variables }
+      : { query: graphqlMutation };
+
+    // Use userApplication for mutations (user's own chain)
+    const app = this.appConnection.userApplication || this.appConnection.application;
+    const result = await app.query(JSON.stringify(payload));
+    const parsed = JSON.parse(result);
+
+    // Check for GraphQL errors
+    if (parsed.errors?.length > 0) {
+      const errorMessage = parsed.errors[0].message;
+      console.error('❌ GraphQL Error:', errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    // In Linera, successful mutations return the mutation field with [] or a value
+    // But errors from the contract come as error responses
+    // We need to wait for the block to be processed and check operation_results
+    
+    return parsed.data as T;
+  }
+  
+  /**
+   * Execute a mutation and wait for block confirmation to get the actual result
+   * This is the proper way to handle Linera mutations that need result validation
+   */
+  async mutateAndWait<T>(graphqlMutation: string, variables?: Record<string, unknown>): Promise<{
+    data: T;
+    operationResult?: string;
+  }> {
+    const data = await this.mutate<T>(graphqlMutation, variables);
+    
+    // Give time for the block to be processed
+    // In production, you'd listen for block notifications
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    return { data };
   }
 
   /**

@@ -46,7 +46,7 @@ async function main() {
   app.use(cors({
     origin: '*',
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
   app.options('*', cors()); // Enable preflight for all routes

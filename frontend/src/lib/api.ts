@@ -89,6 +89,7 @@ export interface Strategist {
 
 export interface AgentStrategy {
   id: number;
+  onchainId: number | null;  // On-chain strategy ID (may differ from backend ID)
   name: string;
   description: string;
   marketKind: string;
@@ -211,6 +212,14 @@ export const api = {
       is_ai_controlled: false,
     }) 
   }),
+  
+  // Link backend strategy to on-chain ID
+  linkStrategyOnchain: (backendId: number, onchainId: number) =>
+    fetchApi<{ success: boolean; id: number; onchain_id: number }>(
+      `/strategies/${backendId}/onchain`,
+      { method: 'PATCH', body: JSON.stringify({ onchain_id: onchainId }) }
+    ),
+    
   getStrategySignals: (id: number, status?: string) => {
     const query = status ? `?status=${status}` : '';
     return fetchApi<Signal[]>(`/strategies/${id}/signals${query}`);

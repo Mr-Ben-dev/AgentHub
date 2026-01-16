@@ -260,6 +260,31 @@ export function createApiRouter(db: Database): Router {
     }
   });
 
+  // PATCH /strategies/:id/onchain - Link backend strategy to on-chain ID
+  router.patch('/strategies/:id/onchain', async (req: Request, res: Response) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { onchain_id } = req.body;
+      
+      if (typeof onchain_id !== 'number' || onchain_id < 0) {
+        return res.status(400).json({ error: 'Invalid onchain_id' });
+      }
+      
+      const strategy = await db.getStrategy(id);
+      if (!strategy) {
+        return res.status(404).json({ error: 'Strategy not found' });
+      }
+      
+      await db.updateStrategyOnchainId(id, onchain_id);
+      
+      console.log(`✅ Linked backend strategy ${id} to on-chain ID ${onchain_id}`);
+      res.json({ success: true, id, onchain_id });
+    } catch (error) {
+      console.error('Error updating onchain_id:', error);
+      res.status(500).json({ error: 'Failed to update onchain_id' });
+    }
+  });
+
   // =========================================================================
   // Signals
   // =========================================================================

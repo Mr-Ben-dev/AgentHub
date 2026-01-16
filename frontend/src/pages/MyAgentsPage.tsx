@@ -227,6 +227,10 @@ export default function MyAgentsPage() {
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}
         wallet={walletAddress}
+        onNeedRegistration={() => {
+          setShowCreateModal(false);
+          setShowRegisterModal(true);
+        }}
       />
     </>
   );
@@ -250,12 +254,14 @@ function RegisterModal({
   const { isConnected: chainConnected, connect: connectToChain } = useChain();
   const [name, setName] = useState('');
   const [bio, setBio] = useState('');
-  const [step, setStep] = useState<'form' | 'signing' | 'syncing'>('form');
+  const [step, setStep] = useState<'form' | 'signing' | 'syncing' | 'success' | 'error'>('form');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const mutation = useMutation({
     mutationFn: async () => {
       // Step 1: Ensure connected to Conway testnet
       setStep('signing');
+      setErrorMessage('');
       
       if (!primaryWallet) throw new Error('Wallet not connected');
       
@@ -275,14 +281,28 @@ function RegisterModal({
         console.log('✅ ON-CHAIN registration result:', result);
         
         // Also sync to backend for caching/indexing
-        await api.registerStrategist({ wallet, name, bio }).catch(console.warn);
+        await api.registerStrategist({ wallet, name, bio }).catch(err => {
+          console.warn('Backend sync failed (non-critical):', err);
+        });
+        
+        // Show success step before closing
+        setStep('success');
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         return result;
       } catch (chainError) {
         console.error('❌ On-chain registration failed:', chainError);
-        // Fallback to backend only if chain fails
-        console.log('⚠️ Falling back to backend registration...');
-        return api.registerStrategist({ wallet, name, bio });
+        const errorMsg = chainError instanceof Error ? chainError.message : 'Unknown error';
+        
+        // Check for already registered error
+        if (errorMsg.toLowerCase().includes('already registered')) {
+          // This is actually okay - user is already registered
+          console.log('✅ User already registered on-chain');
+          await api.registerStrategist({ wallet, name, bio }).catch(console.warn);
+          return true;
+        }
+        
+        throw chainError;
       }
     },
     onSuccess: () => {
@@ -290,8 +310,9 @@ function RegisterModal({
       setStep('form');
       onClose();
     },
-    onError: () => {
-      setStep('form');
+    onError: (error) => {
+      setStep('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Registration failed');
     },
   });
 
@@ -374,7 +395,7 @@ function RegisterModal({
             </div>
 
             {/* Step indicator */}
-            {step !== 'form' && (
+            {(step === 'signing' || step === 'syncing') && (
               <div className="mt-4 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
                 <div className="flex items-center gap-3">
                   <motion.div
@@ -383,8 +404,42 @@ function RegisterModal({
                     className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full"
                   />
                   <span className="text-sm text-cyan-300">
-                    {step === 'signing' ? 'Please sign with your wallet...' : 'Syncing to backend...'}
+                    {step === 'signing' ? 'Please sign with your wallet...' : 'Registering on-chain...'}
                   </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Success indicator */}
+            {step === 'success' && (
+              <div className="mt-4 p-3 rounded-xl bg-green-500/10 border border-green-500/30">
+                <div className="flex items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-green-400" />
+                  <span className="text-sm text-green-300">
+                    Successfully registered on-chain! 🎉
+                  </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Error indicator */}
+            {step === 'error' && errorMessage && (
+              <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                <div className="flex items-start gap-3">
+                  <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-300 font-medium">Registration Failed</p>
+                    <p className="text-xs text-red-400 mt-1">{errorMessage}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setStep('form');
+                      setErrorMessage('');
+                    }}
+                    className="text-xs text-red-400 hover:text-red-300"
+                  >
+                    Retry
+                  </button>
                 </div>
               </div>
             )}
@@ -434,15 +489,19 @@ function CreateAgentModal({
   isOpen,
   onClose,
   wallet,
+  onNeedRegistration,
 }: {
   isOpen: boolean;
   onClose: () => void;
   wallet: string;
+  onNeedRegistration?: () => void;
 }) {
   const queryClient = useQueryClient();
   const { primaryWallet } = useDynamicContext();
   const { isConnected: chainConnected, connect: connectToChain } = useChain();
-  const [step, setStep] = useState<'form' | 'signing' | 'syncing'>('form');
+  const [step, setStep] = useState<'form' | 'signing' | 'syncing' | 'error'>('form');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [needsRegistration, setNeedsRegistration] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -454,6 +513,7 @@ function CreateAgentModal({
     mutationFn: async () => {
       // Step 1: Ensure connected to Conway testnet
       setStep('signing');
+      setErrorMessage('');
       
       if (!primaryWallet) throw new Error('Wallet not connected');
       
@@ -465,11 +525,32 @@ function CreateAgentModal({
       
       console.log('📝 Creating strategy on-chain...');
       
-      // Step 2: Call the REAL on-chain mutation via Linera GraphQL
-      // Contract expects: createAgentStrategy(name, description, marketKind, baseMarket, isPublic, isAiControlled)
+      // Step 2: Check if user is registered as strategist ON-CHAIN first!
+      // This is CRITICAL - the contract will fail if not registered
+      // Note: Uses auto-signer address (Linera AccountOwner), NOT EVM wallet!
+      console.log('🔍 Verifying on-chain strategist registration...');
+      try {
+        const isRegisteredOnChain = await onChainApi.checkStrategistRegistration();
+        if (!isRegisteredOnChain) {
+          setNeedsRegistration(true);
+          throw new Error('You must register as a strategist on-chain first!');
+        }
+        console.log('✅ On-chain strategist registration verified');
+        setNeedsRegistration(false);
+      } catch (checkError) {
+        // If the check failed due to registration, set the flag
+        if (checkError instanceof Error && checkError.message.includes('must register')) {
+          setNeedsRegistration(true);
+          throw checkError;
+        }
+        console.warn('⚠️ Could not verify on-chain registration, proceeding anyway...', checkError);
+        // Continue - the contract will fail if not registered
+      }
+      
+      // Step 3: Call the REAL on-chain mutation via Linera GraphQL
       setStep('syncing');
       try {
-        const strategyId = await onChainApi.createStrategy({
+        const onchainId = await onChainApi.createStrategy({
           name: formData.name,
           description: formData.description,
           marketKind: formData.marketKind,  // "Crypto" | "Sports" | "PredictionApp"
@@ -477,23 +558,38 @@ function CreateAgentModal({
           isPublic: formData.isPublic,
           isAiControlled: true,  // This is AgentHub so agents are AI-controlled
         });
-        console.log('✅ ON-CHAIN strategy created! ID:', strategyId);
+        console.log('✅ ON-CHAIN strategy mutation completed, on-chain ID:', onchainId);
         
         // Also sync to backend for caching/indexing
-        await api.createStrategy({
-          ...formData,
-          creatorWallet: wallet,
-        }).catch(console.warn);
+        // The backend will eventually sync with on-chain state
+        try {
+          const backendStrategy = await api.createStrategy({
+            ...formData,
+            creatorWallet: wallet,
+          });
+          console.log('✅ Backend strategy created with ID:', backendStrategy.id);
+          
+          // Link the on-chain ID to the backend strategy
+          if (typeof onchainId === 'number' && onchainId >= 0) {
+            await api.linkStrategyOnchain(backendStrategy.id, onchainId);
+            console.log(`✅ Linked backend ID ${backendStrategy.id} to on-chain ID ${onchainId}`);
+          }
+        } catch (err) {
+          console.warn('Backend sync failed (non-critical):', err);
+        }
         
-        return strategyId;
+        return onchainId;
       } catch (chainError) {
-        console.error('❌ On-chain strategy creation failed:', chainError);
-        // Fallback to backend only if chain fails
-        console.log('⚠️ Falling back to backend creation...');
-        return api.createStrategy({
-          ...formData,
-          creatorWallet: wallet,
-        });
+        const errorMsg = chainError instanceof Error ? chainError.message : 'Unknown error';
+        console.error('❌ On-chain strategy creation failed:', errorMsg);
+        
+        // Check for common errors
+        if (errorMsg.toLowerCase().includes('strategist not registered') ||
+            errorMsg.toLowerCase().includes('not registered')) {
+          throw new Error('You must register as a strategist first! Please go through the registration flow.');
+        }
+        
+        throw chainError;
       }
     },
     onSuccess: () => {
@@ -503,8 +599,9 @@ function CreateAgentModal({
       setStep('form');
       onClose();
     },
-    onError: () => {
-      setStep('form');
+    onError: (error) => {
+      setStep('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to create strategy');
     },
   });
 
@@ -648,7 +745,7 @@ function CreateAgentModal({
             </div>
 
             {/* Step indicator */}
-            {step !== 'form' && (
+            {(step === 'signing' || step === 'syncing') && (
               <div className="mt-4 p-3 rounded-xl bg-cyan-500/10 border border-cyan-500/30">
                 <div className="flex items-center gap-3">
                   <motion.div
@@ -657,8 +754,43 @@ function CreateAgentModal({
                     className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full"
                   />
                   <span className="text-sm text-cyan-300">
-                    {step === 'signing' ? 'Please sign with your wallet...' : 'Creating strategy...'}
+                    {step === 'signing' ? 'Please sign with your wallet...' : 'Creating strategy on-chain...'}
                   </span>
+                </div>
+              </div>
+            )}
+            
+            {/* Error display */}
+            {step === 'error' && errorMessage && (
+              <div className="mt-4 p-3 rounded-xl bg-red-500/10 border border-red-500/30">
+                <div className="flex items-start gap-3">
+                  <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm text-red-300 font-medium">Creation Failed</p>
+                    <p className="text-xs text-red-400 mt-1">{errorMessage}</p>
+                    {needsRegistration && onNeedRegistration && (
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={onNeedRegistration}
+                        className="mt-3 flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-medium"
+                      >
+                        <Shield className="w-3 h-3" />
+                        Register as Strategist First
+                      </motion.button>
+                    )}
+                  </div>
+                  {!needsRegistration && (
+                    <button
+                      onClick={() => {
+                        setStep('form');
+                        setErrorMessage('');
+                      }}
+                      className="text-xs text-red-400 hover:text-red-300"
+                    >
+                      Retry
+                    </button>
+                  )}
                 </div>
               </div>
             )}

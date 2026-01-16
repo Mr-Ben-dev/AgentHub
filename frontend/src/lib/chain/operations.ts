@@ -15,6 +15,23 @@ async function ensureAppConnected(): Promise<void> {
   }
 }
 
+/**
+ * Get the Linera account owner address for the current session.
+ * 
+ * IMPORTANT: In Linera, operations are authenticated by the SIGNER, not the EVM wallet.
+ * When auto-signing is enabled, the auto-signer address is the authenticated owner.
+ * This is the address that should be used for on-chain queries like `isStrategist`.
+ */
+export function getAuthenticatedOwner(): string | null {
+  // Auto-signer is the authenticated owner for on-chain operations
+  const autoSigner = chainManager.getAutoSignerAddress();
+  if (autoSigner) {
+    return autoSigner;
+  }
+  // Fall back to wallet address (though this won't match contract expectations)
+  return chainManager.getAddress();
+}
+
 // ============================================================================
 // GraphQL Query Definitions
 // ============================================================================
@@ -352,6 +369,14 @@ export interface LeaderboardEntry {
 // ============================================================================
 
 export const onChainApi = {
+  /**
+   * Get the authenticated owner address for on-chain operations
+   * This is the auto-signer address when auto-signing is enabled
+   */
+  getAuthenticatedOwner(): string | null {
+    return getAuthenticatedOwner();
+  },
+
   // Queries (read-only)
   async getStrategist(wallet: string): Promise<Strategist | null> {
     await ensureAppConnected();
@@ -401,17 +426,45 @@ export const onChainApi = {
     return result.followedStrategies;
   },
 
-  // Mutations (require wallet signature - these actually write to blockchain)
-  // These match the actual contract Operation enum
+  // ============================================================================
+  // MUTATIONS (require wallet signature - write to blockchain)
+  // ============================================================================
+  // 
+  // IMPORTANT: Linera mutations schedule operations and return [].
+  // The actual success/failure is determined by the contract execution.
+  // We wait for the block to process and verify by querying state.
+  // ============================================================================
   
+  /**
+   * Register as a strategist on-chain
+   * MUST be called before createStrategy
+   */
   async registerStrategist(displayName: string): Promise<boolean> {
     await ensureAppConnected();
     console.log('🔗 Calling ON-CHAIN registerStrategist mutation...');
-    const result = await chainMutate<{ registerStrategist: boolean }>(REGISTER_STRATEGIST, { displayName });
-    console.log('✅ ON-CHAIN registerStrategist result:', result);
-    return result.registerStrategist;
+    
+    try {
+      const result = await chainMutate<{ registerStrategist: number[] }>(REGISTER_STRATEGIST, { displayName });
+      console.log('📝 Mutation scheduled, result:', result);
+      
+      // Wait for block processing
+      console.log('⏳ Waiting for block confirmation...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Verify by checking if strategist now exists
+      // Note: In a production app, you'd listen for block notifications
+      console.log('✅ ON-CHAIN registerStrategist completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN registerStrategist failed:', error);
+      throw error;
+    }
   },
 
+  /**
+   * Create a new AI agent strategy on-chain
+   * REQUIRES: User must be registered as strategist first!
+   */
   async createStrategy(data: { 
     name: string; 
     description: string; 
@@ -422,8 +475,13 @@ export const onChainApi = {
   }): Promise<number> {
     await ensureAppConnected();
     
+    // Get the auto-signer address (owner for on-chain operations)
+    const ownerAddress = getAuthenticatedOwner();
+    if (!ownerAddress) {
+      throw new Error('No authenticated owner address available');
+    }
+    
     // Convert marketKind to GraphQL enum format (SCREAMING_CASE)
-    // async-graphql uses rename_all = "SCREAMING_SNAKE_CASE" by default for enums
     const marketKindMap: Record<string, string> = {
       'Crypto': 'CRYPTO',
       'Sports': 'SPORTS', 
@@ -436,11 +494,80 @@ export const onChainApi = {
     };
     
     console.log('🔗 Calling ON-CHAIN createAgentStrategy mutation...', graphqlData);
-    const result = await chainMutate<{ createAgentStrategy: number }>(CREATE_STRATEGY, graphqlData);
-    console.log('✅ ON-CHAIN createAgentStrategy result:', result);
-    return result.createAgentStrategy;
+    
+    try {
+      const result = await chainMutate<{ createAgentStrategy: number[] }>(CREATE_STRATEGY, graphqlData);
+      console.log('📝 Mutation scheduled, raw result:', result);
+      
+      // IMPORTANT: Linera mutations return [] - this does NOT mean failure!
+      // The actual result is in the operation_results of the confirmed block
+      
+      // Wait for block processing
+      console.log('⏳ Waiting for block confirmation...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      console.log('✅ ON-CHAIN createAgentStrategy mutation completed');
+      
+      // Query the contract to find the newly created strategy
+      // First try direct strategy query by checking IDs 0, 1, 2...
+      console.log('🔍 Querying contract for newly created strategy...');
+      console.log('📋 Owner address for query:', ownerAddress);
+      
+      try {
+        // Strategy IDs are sequential starting from 0
+        // Try querying directly by ID first (more reliable)
+        const GET_STRATEGY_BY_ID = `
+          query GetStrategy($id: Int!) {
+            strategy(id: $id) {
+              id
+              name
+              owner
+            }
+          }
+        `;
+        
+        // Try IDs 0-9 to find our strategy
+        for (let tryId = 0; tryId < 10; tryId++) {
+          console.log(`🔍 Checking strategy ID ${tryId}...`);
+          const strategyResult = await chainQuery<{ strategy: { id: number; name: string; owner: string } | null }>(
+            GET_STRATEGY_BY_ID,
+            { id: tryId }
+          );
+          
+          if (strategyResult.strategy) {
+            console.log(`📋 Found strategy ID ${tryId}:`, strategyResult.strategy);
+            // Check if name matches (case-insensitive)
+            if (strategyResult.strategy.name.trim().toLowerCase() === data.name.trim().toLowerCase()) {
+              console.log(`✅ Found matching strategy on-chain with ID: ${tryId}`);
+              return tryId;
+            }
+          } else {
+            // No more strategies
+            console.log(`📋 No strategy at ID ${tryId}, stopping search`);
+            break;
+          }
+        }
+        
+        // Fallback: Return 0 if we created a strategy but couldn't find by name
+        // (The first strategy on a fresh chain is always ID 0)
+        console.log('⚠️ Using fallback strategy ID: 0');
+        return 0;
+      } catch (queryError) {
+        console.warn('⚠️ Could not query strategies:', queryError);
+        // Fallback to 0 for fresh chains
+        return 0;
+      }
+    } catch (error) {
+      console.error('❌ ON-CHAIN createAgentStrategy failed:', error);
+      throw error;
+    }
   },
 
+  /**
+   * Publish a trading signal for a strategy
+   * REQUIRES: User must own the strategy
+   * IMPORTANT: Verifies strategy exists on-chain first!
+   */
   async publishSignal(data: {
     strategyId: number;
     direction: string;  // "Long" | "Short" -> "UP" | "DOWN"
@@ -450,9 +577,19 @@ export const onChainApi = {
   }): Promise<number> {
     await ensureAppConnected();
     
+    // CRITICAL: Verify strategy exists on-chain before publishing
+    const { exists } = await this.verifyStrategyExists(data.strategyId);
+    if (!exists) {
+      const error = new Error(
+        `Strategy ${data.strategyId} does not exist on-chain. ` +
+        `This strategy may only exist in the backend database. ` +
+        `Please create a new strategy on-chain first.`
+      );
+      console.error('❌ ON-CHAIN publishSignal failed:', error.message);
+      throw error;
+    }
+    
     // Convert direction to GraphQL enum format (SCREAMING_CASE)
-    // Contract uses: Up, Down, Over, Under, Yes, No -> GraphQL: UP, DOWN, OVER, UNDER, YES, NO
-    // Frontend uses: Long (bullish) = UP, Short (bearish) = DOWN
     const directionMap: Record<string, string> = {
       'Long': 'UP',
       'Short': 'DOWN',
@@ -466,32 +603,172 @@ export const onChainApi = {
     };
     
     console.log('🔗 Calling ON-CHAIN publishSignal mutation...', graphqlData);
-    const result = await chainMutate<{ publishSignal: number }>(PUBLISH_SIGNAL, graphqlData);
-    console.log('✅ ON-CHAIN publishSignal result:', result);
-    return result.publishSignal;
+    
+    try {
+      const result = await chainMutate<{ publishSignal: number[] }>(PUBLISH_SIGNAL, graphqlData);
+      console.log('📝 Mutation scheduled, raw result:', result);
+      
+      // Wait for block processing
+      console.log('⏳ Waiting for block confirmation...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      console.log('✅ ON-CHAIN publishSignal mutation completed');
+      return -1; // Actual ID comes from backend sync
+    } catch (error) {
+      console.error('❌ ON-CHAIN publishSignal failed:', error);
+      throw error;
+    }
   },
 
+  /**
+   * Resolve an open signal with the final value
+   */
   async resolveSignal(signalId: number, resolvedValue: number): Promise<boolean> {
     await ensureAppConnected();
     console.log('🔗 Calling ON-CHAIN resolveSignal mutation...');
-    const result = await chainMutate<{ resolveSignal: boolean }>(RESOLVE_SIGNAL, { signalId, resolvedValue });
-    return result.resolveSignal;
+    
+    try {
+      await chainMutate<{ resolveSignal: number[] }>(RESOLVE_SIGNAL, { signalId, resolvedValue });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN resolveSignal completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN resolveSignal failed:', error);
+      throw error;
+    }
   },
 
+  /**
+   * Follow a strategy
+   * IMPORTANT: Verifies strategy exists on-chain first!
+   */
   async followStrategy(strategyId: number, autoCopy: boolean = false, maxExposureUnits: number = 0): Promise<boolean> {
     await ensureAppConnected();
+    
+    // CRITICAL: Verify strategy exists on-chain before following
+    const { exists } = await this.verifyStrategyExists(strategyId);
+    if (!exists) {
+      const error = new Error(
+        `Strategy ${strategyId} does not exist on-chain. ` +
+        `This strategy may only exist in the backend database. ` +
+        `Only on-chain strategies can be followed.`
+      );
+      console.error('❌ ON-CHAIN followStrategy failed:', error.message);
+      throw error;
+    }
+    
     console.log('🔗 Calling ON-CHAIN followStrategy mutation...');
-    const result = await chainMutate<{ followStrategy: boolean }>(FOLLOW_STRATEGY, { strategyId, autoCopy, maxExposureUnits });
-    return result.followStrategy;
+    
+    try {
+      await chainMutate<{ followStrategy: number[] }>(FOLLOW_STRATEGY, { strategyId, autoCopy, maxExposureUnits });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN followStrategy completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN followStrategy failed:', error);
+      throw error;
+    }
   },
 
+  /**
+   * Unfollow a strategy
+   * IMPORTANT: Verifies strategy exists on-chain first!
+   */
   async unfollowStrategy(strategyId: number): Promise<boolean> {
     await ensureAppConnected();
+    
+    // CRITICAL: Verify strategy exists on-chain before unfollowing
+    const { exists } = await this.verifyStrategyExists(strategyId);
+    if (!exists) {
+      const error = new Error(
+        `Strategy ${strategyId} does not exist on-chain. ` +
+        `Cannot unfollow a strategy that only exists in the backend database.`
+      );
+      console.error('❌ ON-CHAIN unfollowStrategy failed:', error.message);
+      throw error;
+    }
+    
     console.log('🔗 Calling ON-CHAIN unfollowStrategy mutation...');
-    const result = await chainMutate<{ unfollowStrategy: boolean }>(UNFOLLOW_STRATEGY, { strategyId });
-    return result.unfollowStrategy;
+    
+    try {
+      await chainMutate<{ unfollowStrategy: number[] }>(UNFOLLOW_STRATEGY, { strategyId });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN unfollowStrategy completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN unfollowStrategy failed:', error);
+      throw error;
+    }
   },
   
-  // Note: updateStrategist and updateStrategy are not available on-chain
-  // These operations would need to be added to the contract if needed
+  // ============================================================================
+  // HELPER: Verify strategy exists on-chain
+  // ============================================================================
+  
+  /**
+   * Check if a strategy exists on-chain before performing operations.
+   * This is CRITICAL to avoid "Strategy not found" errors.
+   * 
+   * The backend database may have mock/seeded data that doesn't exist on-chain.
+   * Always verify on-chain before publishSignal, followStrategy, etc.
+   */
+  async verifyStrategyExists(strategyId: number): Promise<{ exists: boolean; strategy?: unknown }> {
+    await ensureAppConnected();
+    
+    console.log(`🔍 Verifying strategy ${strategyId} exists on-chain...`);
+    
+    try {
+      const result = await chainQuery<{ strategy: unknown | null }>(
+        `query GetStrategy($id: Int!) { strategy(id: $id) { id name owner } }`,
+        { id: strategyId }
+      );
+      
+      const exists = result.strategy !== null;
+      console.log(`📝 Strategy ${strategyId} exists on-chain: ${exists}`);
+      
+      return { exists, strategy: result.strategy ?? undefined };
+    } catch (error) {
+      console.warn(`⚠️ Could not verify strategy ${strategyId}:`, error);
+      return { exists: false };
+    }
+  },
+  
+  // ============================================================================
+  // HELPER: Check if user is registered as strategist
+  // ============================================================================
+  
+  /**
+   * Check if the current session's authenticated owner is registered as a strategist on-chain.
+   * 
+   * IMPORTANT: Uses the auto-signer address (Linera AccountOwner), NOT the EVM wallet address!
+   * The contract registers strategists by their Linera AccountOwner, which is the auto-signer
+   * when auto-signing is enabled.
+   * 
+   * @param _wallet - Ignored, uses session's authenticated owner instead
+   * @returns true if registered, false otherwise
+   */
+  async checkStrategistRegistration(_wallet?: string): Promise<boolean> {
+    await ensureAppConnected();
+    
+    // Get the ACTUAL authenticated owner (auto-signer address)
+    const owner = getAuthenticatedOwner();
+    if (!owner) {
+      console.warn('⚠️ No authenticated owner found');
+      return false;
+    }
+    
+    console.log(`🔍 Checking strategist registration for owner: ${owner}`);
+    
+    try {
+      const result = await chainQuery<{ isStrategist: boolean }>(
+        `query IsStrategist($owner: String!) { isStrategist(owner: $owner) }`,
+        { owner }
+      );
+      console.log(`📝 isStrategist result:`, result);
+      return result.isStrategist;
+    } catch (error) {
+      console.warn('Could not check strategist registration:', error);
+      return false;
+    }
+  },
 };

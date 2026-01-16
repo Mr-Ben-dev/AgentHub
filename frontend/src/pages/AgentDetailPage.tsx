@@ -61,7 +61,7 @@ export default function AgentDetailPage() {
   const strategyId = parseInt(id || '0');
   const queryClient = useQueryClient();
   const { primaryWallet } = useDynamicContext();
-  const walletAddress = primaryWallet?.address;
+  const walletAddress = primaryWallet?.address?.toLowerCase();
   const { isConnected, connect } = useChain();
 
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'closed'>('all');
@@ -73,15 +73,46 @@ export default function AgentDetailPage() {
     confidence: 75,
     horizonHours: 24,
   });
+  const [onChainError, setOnChainError] = useState<string | null>(null);
 
-  // Fetch strategy details
+  // Fetch strategy details from backend (SHARED data source)
   const { data: strategyData, isLoading: loadingStrategy, refetch: refetchStrategy } = useQuery({
     queryKey: ['strategy', strategyId],
     queryFn: () => api.getStrategy(strategyId),
     enabled: strategyId > 0,
   });
 
-  // Fetch signals
+  const strategy = strategyData?.strategy;
+  const stats = strategyData?.stats;
+  
+  // Check if current user is the OWNER of this strategy
+  const isOwner = Boolean(walletAddress && strategy?.creatorWallet?.toLowerCase() === walletAddress?.toLowerCase());
+  
+  // On-chain ID (only relevant if user is owner and strategy is on-chain)
+  const onchainId = strategy?.onchainId;
+  
+  // On-chain status is only checked for OWNER's strategies
+  // Other users see the strategy from backend (shared data)
+  const { data: onChainStatus = { exists: false }, isLoading: checkingOnChain } = useQuery({
+    queryKey: ['strategy-onchain-owner', onchainId, isOwner],
+    queryFn: async () => {
+      // Only verify on-chain if user is the owner
+      if (!isOwner || !isConnected) return { exists: false, notOwner: true };
+      if (onchainId === null || onchainId === undefined) {
+        return { exists: false, noOnchainId: true };
+      }
+      try {
+        const result = await onChainApi.verifyStrategyExists(onchainId);
+        return result;
+      } catch {
+        return { exists: false, error: true };
+      }
+    },
+    enabled: strategyId > 0 && isOwner && isConnected,
+    staleTime: 30000,
+  });
+
+  // Fetch signals from backend (SHARED)
   const { data: signals, isLoading: loadingSignals } = useQuery({
     queryKey: ['strategy-signals', strategyId, activeTab],
     queryFn: () => api.getStrategySignals(strategyId, activeTab === 'all' ? undefined : activeTab),
@@ -95,35 +126,32 @@ export default function AgentDetailPage() {
     enabled: !!walletAddress && strategyId > 0,
   });
 
-  // On-chain Follow/Unfollow mutation with wallet signing
+  // Follow/Unfollow mutation - works through BACKEND for shared state
+  // On-chain follow only possible for strategies on THIS user's chain (which means the user owns it)
+  // For OTHER users' strategies, we only use backend (cross-chain data sharing)
   const followMutation = useMutation({
     mutationFn: async () => {
       if (!walletAddress) throw new Error('Wallet not connected');
       
-      // Ensure connected to Conway testnet
-      if (!isConnected) {
-        console.log('🔗 Connecting to Conway for follow operation...');
-        await connect();
-      }
-      
       const currentlyFollowing = followStatus?.isFollowing;
       
+      // ALWAYS update backend (shared data source for all users)
+      // On-chain follow is skipped since strategies exist on different users' chains
       if (currentlyFollowing) {
-        console.log('🔗 ON-CHAIN: Unfollowing strategy', strategyId);
-        await onChainApi.unfollowStrategy(strategyId);
-        // Also update backend for consistency
+        console.log('📊 BACKEND: Unfollowing strategy:', strategyId);
         await api.unfollowStrategy(walletAddress, strategyId);
+        console.log('✅ Unfollow recorded in backend (shared data)');
       } else {
-        console.log('🔗 ON-CHAIN: Following strategy', strategyId);
-        await onChainApi.followStrategy(strategyId, false, 0);
-        // Also update backend for consistency
+        console.log('📊 BACKEND: Following strategy:', strategyId);
         await api.followStrategy(walletAddress, strategyId);
+        console.log('✅ Follow recorded in backend (shared data)');
       }
       
       return !currentlyFollowing;
     },
     onSuccess: (nowFollowing) => {
       setIsFollowing(nowFollowing);
+      setOnChainError(null);
       queryClient.invalidateQueries({ queryKey: ['following', walletAddress, strategyId] });
       queryClient.invalidateQueries({ queryKey: ['strategy', strategyId] });
       // Refetch to get updated data
@@ -134,41 +162,48 @@ export default function AgentDetailPage() {
     },
     onError: (error) => {
       console.error('Follow/Unfollow error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to follow/unfollow';
+      setOnChainError(errorMsg);
     },
   });
 
-  // On-chain Publish Signal mutation
+  // Publish Signal mutation - OWNER ONLY (only strategy creator can publish signals)
   const publishSignalMutation = useMutation({
     mutationFn: async () => {
       if (!walletAddress) throw new Error('Wallet not connected');
+      if (!isOwner) throw new Error('Only the strategy owner can publish signals');
       
-      // Ensure connected to Conway testnet
+      // Ensure connected to Conway testnet for owner's operations
       if (!isConnected) {
         console.log('🔗 Connecting to Conway for signal operation...');
         await connect();
       }
       
-      console.log('🔗 ON-CHAIN: Publishing signal for strategy', strategyId);
+      // Use on-chain ID for chain operations (owner must have this)
+      if (onchainId === null || onchainId === undefined) {
+        throw new Error('Strategy is not on-chain yet. Please wait for chain sync.');
+      }
+      
+      console.log('🔗 ON-CHAIN: Publishing signal for strategy (onchain_id:', onchainId, ')');
       
       // Convert confidence % to basis points (0-10000)
       const confidenceBps = signalForm.confidence * 100;
       // Convert hours to seconds
       const horizonSecs = signalForm.horizonHours * 3600;
       
-      // Publish on-chain
+      // Publish on-chain using onchainId
       const signalId = await onChainApi.publishSignal({
-        strategyId,
+        strategyId: onchainId,
         direction: signalForm.direction,
         horizonSecs,
         confidenceBps,
       });
       
-      // Also create in backend for display
-      // Direction mapping: Long->Up, Short->Down
+      // Also create in backend for display to ALL users
       const backendDirection = signalForm.direction === 'Long' ? 'Up' : 'Down';
       await api.createSignal({
         walletAddress: walletAddress,
-        strategyId,
+        strategyId,  // Backend uses backend ID
         direction: backendDirection,
         horizonSecs,
         confidenceBps,
@@ -179,12 +214,15 @@ export default function AgentDetailPage() {
     onSuccess: (signalId) => {
       console.log('✅ Signal published:', signalId);
       setShowSignalModal(false);
+      setOnChainError(null);
       queryClient.invalidateQueries({ queryKey: ['strategy-signals', strategyId] });
       queryClient.invalidateQueries({ queryKey: ['strategy', strategyId] });
       queryClient.invalidateQueries({ queryKey: ['feed'] });
     },
     onError: (error) => {
       console.error('Publish signal error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to publish signal';
+      setOnChainError(errorMsg);
     },
   });
 
@@ -216,9 +254,16 @@ export default function AgentDetailPage() {
     );
   }
 
-  const { strategy, stats } = strategyData;
-  const isOwner = walletAddress?.toLowerCase() === strategy?.creatorWallet?.toLowerCase();
-  const marketIcon = marketIcons[strategy?.marketKind?.toLowerCase()] || <Bitcoin className="w-8 h-8" />;
+  // At this point strategy is guaranteed to exist (we handled !strategyData above)
+  // But TypeScript needs help understanding this
+  if (!strategy) {
+    return null; // Should never reach here
+  }
+
+  // strategy and stats already extracted at top of component
+  // isOwner is already defined above with on-chain status check
+  const marketKindKey = strategy.marketKind?.toLowerCase() || 'crypto';
+  const marketIcon = marketIcons[marketKindKey] || <Bitcoin className="w-8 h-8" />;
   
   // Safe stats with defaults
   const safeStats = {
@@ -304,6 +349,28 @@ export default function AgentDetailPage() {
                   Private
                 </span>
               )}
+              {/* On-Chain Status Indicator - Only shown to owner */}
+              {isOwner && checkingOnChain ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-500/20 text-slate-400 border border-slate-500/30 text-sm font-medium">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Checking...
+                </span>
+              ) : isOwner && onChainStatus?.exists ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/20 text-green-400 border border-green-500/30 text-sm font-medium">
+                  <Zap className="w-3.5 h-3.5" />
+                  On-Chain Verified
+                </span>
+              ) : isOwner && isConnected ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-sm font-medium">
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Syncing to Chain...
+                </span>
+              ) : !isOwner && onchainId !== null ? (
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-sm font-medium">
+                  <Zap className="w-3.5 h-3.5" />
+                  Verified
+                </span>
+              ) : null}
             </div>
             <p className="text-slate-400 mb-4 max-w-2xl">{strategy.description}</p>
             <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
@@ -329,18 +396,60 @@ export default function AgentDetailPage() {
 
           {/* Actions */}
           <div className="flex flex-col gap-3 items-end">
+            {/* On-Chain Error Alert */}
+            {onChainError && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-sm max-w-xs">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">On-Chain Error</p>
+                  <p className="text-red-400/80 text-xs">{onChainError}</p>
+                  <button 
+                    onClick={() => setOnChainError(null)}
+                    className="text-red-300 hover:text-white mt-1 text-xs underline"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            )}
+            
+            {/* Off-Chain Warning - Only shown to OWNER */}
+            {isOwner && isConnected && !checkingOnChain && !onChainStatus?.exists && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm max-w-xs">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Strategy Syncing</p>
+                  <p className="text-amber-400/80 text-xs">
+                    Your strategy is syncing to Linera blockchain. 
+                    Please wait for confirmation before publishing signals.
+                  </p>
+                </div>
+              </div>
+            )}
+            
             {/* Publish Signal Button - Only for owner */}
             {isOwner && walletAddress && (
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: onChainStatus?.exists ? 1.05 : 1 }}
+                whileTap={{ scale: onChainStatus?.exists ? 0.95 : 1 }}
                 onClick={() => setShowSignalModal(true)}
-                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 transition-all"
+                disabled={!onChainStatus?.exists || checkingOnChain}
+                className={cn(
+                  "flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all",
+                  onChainStatus?.exists
+                    ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
+                    : "bg-slate-700/50 text-slate-500 cursor-not-allowed"
+                )}
               >
-                <Zap className="w-4 h-4" />
+                {checkingOnChain ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Zap className="w-4 h-4" />
+                )}
                 Publish Signal
               </motion.button>
             )}
+            {/* Follow Button - Available to NON-owners (backend-first) */}
             {!isOwner && walletAddress && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
