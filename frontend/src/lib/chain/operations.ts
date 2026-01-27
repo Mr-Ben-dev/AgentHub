@@ -294,6 +294,121 @@ export const UNFOLLOW_STRATEGY = `
   }
 `;
 
+// ============================================================================
+// Subscription Operations (cross-chain subscription to strategists)
+// ============================================================================
+
+/**
+ * Enable subscription for this strategist
+ * Contract: EnableSubscription { description: Option<String> }
+ */
+export const ENABLE_SUBSCRIPTION = `
+  mutation EnableSubscription($description: String) {
+    enableSubscription(description: $description)
+  }
+`;
+
+/**
+ * Disable subscription for this strategist
+ * Contract: DisableSubscription
+ */
+export const DISABLE_SUBSCRIPTION = `
+  mutation DisableSubscription {
+    disableSubscription
+  }
+`;
+
+/**
+ * Subscribe to a strategist (cross-chain)
+ * Contract: SubscribeToStrategist { strategist: AccountOwner, strategist_chain_id: String }
+ */
+export const SUBSCRIBE_TO_STRATEGIST = `
+  mutation SubscribeToStrategist($strategist: String!, $strategistChainId: String!) {
+    subscribeToStrategist(strategist: $strategist, strategistChainId: $strategistChainId)
+  }
+`;
+
+/**
+ * Unsubscribe from a strategist
+ * Contract: UnsubscribeFromStrategist { strategist: AccountOwner }
+ */
+export const UNSUBSCRIBE_FROM_STRATEGIST = `
+  mutation UnsubscribeFromStrategist($strategist: String!) {
+    unsubscribeFromStrategist(strategist: $strategist)
+  }
+`;
+
+/**
+ * Get subscription offer for a strategist
+ */
+export const GET_SUBSCRIPTION_OFFER = `
+  query GetSubscriptionOffer($strategist: String!) {
+    subscriptionOffer(strategist: $strategist) {
+      strategist
+      description
+      isEnabled
+    }
+  }
+`;
+
+/**
+ * Get all subscription offers
+ */
+export const GET_SUBSCRIPTION_OFFERS = `
+  query GetSubscriptionOffers($limit: Int) {
+    subscriptionOffers(limit: $limit) {
+      strategist
+      description
+      isEnabled
+    }
+  }
+`;
+
+/**
+ * Get my subscriptions
+ */
+export const GET_MY_SUBSCRIPTIONS = `
+  query GetMySubscriptions($subscriber: String!) {
+    mySubscriptions(subscriber: $subscriber) {
+      id
+      subscriber
+      subscriberChainId
+      strategist
+      strategistChainId
+      startTimestamp
+      endTimestamp
+      isActive
+    }
+  }
+`;
+
+/**
+ * Get subscribers for a strategist
+ */
+export const GET_SUBSCRIBERS_OF = `
+  query GetSubscribersOf($strategist: String!) {
+    subscribersOf(strategist: $strategist) {
+      id
+      subscriber
+      subscriberChainId
+      strategist
+      strategistChainId
+      startTimestamp
+      endTimestamp
+      isActive
+    }
+  }
+`;
+
+/**
+ * Check if subscribed to a strategist
+ */
+export const IS_SUBSCRIBED = `
+  query IsSubscribed($subscriber: String!, $strategist: String!) {
+    isSubscribed(subscriber: $subscriber, strategist: $strategist)
+  }
+`;
+
 // NOTE: UpdateStrategist and UpdateStrategy don't exist in contract
 // These operations are not available on-chain
 
@@ -362,6 +477,24 @@ export interface LeaderboardEntry {
   totalPnl: number;
   totalSignals: number;
   followers: number;
+}
+
+// Subscription interfaces
+export interface SubscriptionOffer {
+  strategist: string;
+  description?: string;
+  isEnabled: boolean;
+}
+
+export interface Subscription {
+  id: string;
+  subscriber: string;
+  subscriberChainId: string;
+  strategist: string;
+  strategistChainId: string;
+  startTimestamp: number;
+  endTimestamp: number;
+  isActive: boolean;
 }
 
 // ============================================================================
@@ -768,6 +901,183 @@ export const onChainApi = {
       return result.isStrategist;
     } catch (error) {
       console.warn('Could not check strategist registration:', error);
+      return false;
+    }
+  },
+
+  // ============================================================================
+  // SUBSCRIPTION OPERATIONS (cross-chain following)
+  // ============================================================================
+
+  /**
+   * Enable subscription for this strategist (allows others to subscribe)
+   */
+  async enableSubscription(description?: string): Promise<boolean> {
+    await ensureAppConnected();
+    console.log('🔗 Calling ON-CHAIN enableSubscription mutation...');
+    
+    try {
+      await chainMutate<{ enableSubscription: unknown }>(ENABLE_SUBSCRIPTION, { description });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN enableSubscription completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN enableSubscription failed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Disable subscription for this strategist
+   */
+  async disableSubscription(): Promise<boolean> {
+    await ensureAppConnected();
+    console.log('🔗 Calling ON-CHAIN disableSubscription mutation...');
+    
+    try {
+      await chainMutate<{ disableSubscription: unknown }>(DISABLE_SUBSCRIPTION, {});
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN disableSubscription completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN disableSubscription failed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Subscribe to a strategist (cross-chain subscription)
+   * @param strategist - The strategist's Linera account owner address
+   * @param strategistChainId - The strategist's chain ID
+   */
+  async subscribeToStrategist(strategist: string, strategistChainId: string): Promise<boolean> {
+    await ensureAppConnected();
+    console.log('🔗 Calling ON-CHAIN subscribeToStrategist mutation...', { strategist, strategistChainId });
+    
+    try {
+      await chainMutate<{ subscribeToStrategist: unknown }>(SUBSCRIBE_TO_STRATEGIST, { 
+        strategist, 
+        strategistChainId 
+      });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN subscribeToStrategist completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN subscribeToStrategist failed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Unsubscribe from a strategist
+   */
+  async unsubscribeFromStrategist(strategist: string): Promise<boolean> {
+    await ensureAppConnected();
+    console.log('🔗 Calling ON-CHAIN unsubscribeFromStrategist mutation...');
+    
+    try {
+      await chainMutate<{ unsubscribeFromStrategist: unknown }>(UNSUBSCRIBE_FROM_STRATEGIST, { strategist });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ ON-CHAIN unsubscribeFromStrategist completed');
+      return true;
+    } catch (error) {
+      console.error('❌ ON-CHAIN unsubscribeFromStrategist failed:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get subscription offer for a strategist
+   */
+  async getSubscriptionOffer(strategist: string): Promise<SubscriptionOffer | null> {
+    await ensureAppConnected();
+    
+    try {
+      const result = await chainQuery<{ subscriptionOffer: SubscriptionOffer | null }>(
+        GET_SUBSCRIPTION_OFFER, 
+        { strategist }
+      );
+      return result.subscriptionOffer;
+    } catch (error) {
+      console.warn('Could not get subscription offer:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Get all active subscription offers
+   */
+  async getSubscriptionOffers(limit?: number): Promise<SubscriptionOffer[]> {
+    await ensureAppConnected();
+    
+    try {
+      const result = await chainQuery<{ subscriptionOffers: SubscriptionOffer[] }>(
+        GET_SUBSCRIPTION_OFFERS,
+        { limit: limit || 50 }
+      );
+      return result.subscriptionOffers || [];
+    } catch (error) {
+      console.warn('Could not get subscription offers:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get subscriptions for the current user
+   */
+  async getMySubscriptions(): Promise<Subscription[]> {
+    await ensureAppConnected();
+    
+    const subscriber = getAuthenticatedOwner();
+    if (!subscriber) return [];
+    
+    try {
+      const result = await chainQuery<{ mySubscriptions: Subscription[] }>(
+        GET_MY_SUBSCRIPTIONS,
+        { subscriber }
+      );
+      return result.mySubscriptions || [];
+    } catch (error) {
+      console.warn('Could not get subscriptions:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Get subscribers for a strategist
+   */
+  async getSubscribersOf(strategist: string): Promise<Subscription[]> {
+    await ensureAppConnected();
+    
+    try {
+      const result = await chainQuery<{ subscribersOf: Subscription[] }>(
+        GET_SUBSCRIBERS_OF,
+        { strategist }
+      );
+      return result.subscribersOf || [];
+    } catch (error) {
+      console.warn('Could not get subscribers:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Check if subscribed to a strategist
+   */
+  async isSubscribed(strategist: string): Promise<boolean> {
+    await ensureAppConnected();
+    
+    const subscriber = getAuthenticatedOwner();
+    if (!subscriber) return false;
+    
+    try {
+      const result = await chainQuery<{ isSubscribed: boolean }>(
+        IS_SUBSCRIBED,
+        { subscriber, strategist }
+      );
+      return result.isSubscribed;
+    } catch (error) {
+      console.warn('Could not check subscription:', error);
       return false;
     }
   },

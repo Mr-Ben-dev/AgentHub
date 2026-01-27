@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use agent_hub::{
     AgentHubAbi, AgentStrategy, MarketKind, Operation, Signal, SignalStatus,
-    StrategyStats, StrategyWithStats,
+    StrategyStats, StrategyWithStats, Subscription, SubscriptionOffer,
 };
 use async_graphql::{EmptySubscription, Object, Schema};
 use linera_sdk::{
@@ -287,5 +287,106 @@ impl QueryRoot {
         };
         
         self.state.strategists.contains_key(&owner_account).await.unwrap_or(false)
+    }
+
+    // =========================================================================
+    // Subscription Queries
+    // =========================================================================
+
+    /// Get subscription offer for a strategist
+    async fn subscription_offer(&self, strategist: String) -> Option<SubscriptionOffer> {
+        let strategist_account: AccountOwner = match strategist.parse() {
+            Ok(o) => o,
+            Err(_) => return None,
+        };
+        
+        self.state.subscription_offers.get(&strategist_account).await.ok().flatten()
+    }
+
+    /// Get all strategists with active subscription offers
+    async fn subscription_offers(&self, limit: Option<i32>) -> Vec<SubscriptionOffer> {
+        let limit = limit.unwrap_or(50) as usize;
+        let mut offers = Vec::new();
+        
+        // Iterate through strategists and check for subscription offers
+        let mut strategist_iter = self.state.strategists.indices().await.ok().unwrap_or_default();
+        
+        for strategist in strategist_iter.drain(..).take(limit * 2) {
+            if let Ok(Some(offer)) = self.state.subscription_offers.get(&strategist).await {
+                if offer.is_enabled {
+                    offers.push(offer);
+                }
+            }
+        }
+        
+        offers.into_iter().take(limit).collect()
+    }
+
+    /// Get subscriptions for a subscriber
+    async fn my_subscriptions(&self, subscriber: String) -> Vec<Subscription> {
+        let subscriber_account: AccountOwner = match subscriber.parse() {
+            Ok(o) => o,
+            Err(_) => return Vec::new(),
+        };
+        
+        let sub_ids = self.state.subscriptions_by_subscriber.get(&subscriber_account).await
+            .ok().flatten().unwrap_or_default();
+        
+        let mut subscriptions = Vec::new();
+        for sub_id in sub_ids {
+            if let Ok(Some(sub)) = self.state.subscriptions.get(&sub_id).await {
+                subscriptions.push(sub);
+            }
+        }
+        
+        subscriptions
+    }
+
+    /// Get subscribers for a strategist
+    async fn subscribers_of(&self, strategist: String) -> Vec<Subscription> {
+        let strategist_account: AccountOwner = match strategist.parse() {
+            Ok(o) => o,
+            Err(_) => return Vec::new(),
+        };
+        
+        let sub_ids = self.state.subscribers_by_strategist.get(&strategist_account).await
+            .ok().flatten().unwrap_or_default();
+        
+        let mut subscriptions = Vec::new();
+        for sub_id in sub_ids {
+            if let Ok(Some(sub)) = self.state.subscriptions.get(&sub_id).await {
+                if sub.is_active {
+                    subscriptions.push(sub);
+                }
+            }
+        }
+        
+        subscriptions
+    }
+
+    /// Check if a user is subscribed to a strategist
+    async fn is_subscribed(&self, subscriber: String, strategist: String) -> bool {
+        let subscriber_account: AccountOwner = match subscriber.parse() {
+            Ok(o) => o,
+            Err(_) => return false,
+        };
+        
+        let strategist_account: AccountOwner = match strategist.parse() {
+            Ok(o) => o,
+            Err(_) => return false,
+        };
+        
+        let sub_ids = self.state.subscriptions_by_subscriber.get(&subscriber_account).await
+            .ok().flatten().unwrap_or_default();
+        
+        for sub_id in sub_ids {
+            if let Ok(Some(sub)) = self.state.subscriptions.get(&sub_id).await {
+                if sub.strategist == strategist_account && sub.is_active {
+                    return true;
+                }
+            }
+        }
+        
+        false
     }
 }

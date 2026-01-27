@@ -45,7 +45,6 @@ import {
 import {
   cn,
   formatPercent,
-  formatNumber,
   formatDate,
   shortenAddress,
 } from '@/lib/utils';
@@ -66,8 +65,6 @@ export default function AgentDetailPage() {
   const { isConnected, connect } = useChain();
 
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'closed'>('all');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_isFollowing, setIsFollowing] = useState(false);
   const [showSignalModal, setShowSignalModal] = useState(false);
   const [signalForm, setSignalForm] = useState({
     direction: 'Long' as 'Long' | 'Short',
@@ -76,9 +73,11 @@ export default function AgentDetailPage() {
     asset: 'BTC' as 'BTC' | 'ETH',
   });
   const [onChainError, setOnChainError] = useState<string | null>(null);
+  // Local subscription state for instant UI feedback
+  const [localSubscribed, setLocalSubscribed] = useState<boolean | null>(null);
 
   // Fetch strategy details from backend (SHARED data source)
-  const { data: strategyData, isLoading: loadingStrategy, refetch: refetchStrategy } = useQuery({
+  const { data: strategyData, isLoading: loadingStrategy } = useQuery({
     queryKey: ['strategy', strategyId],
     queryFn: () => api.getStrategy(strategyId),
     enabled: strategyId > 0,
@@ -92,17 +91,14 @@ export default function AgentDetailPage() {
   
   // On-chain ID (only relevant if user is owner and strategy is on-chain)
   const onchainId = strategy?.onchainId;
+  const hasOnchainId = onchainId !== null && onchainId !== undefined && onchainId >= 0;
   
-  // On-chain status is only checked for OWNER's strategies
-  // Other users see the strategy from backend (shared data)
+  // On-chain status verification - verify for ALL users when connected
   const { data: onChainStatus = { exists: false }, isLoading: checkingOnChain } = useQuery({
-    queryKey: ['strategy-onchain-owner', onchainId, isOwner],
+    queryKey: ['strategy-onchain-verify', onchainId, isConnected],
     queryFn: async () => {
-      // Only verify on-chain if user is the owner
-      if (!isOwner || !isConnected) return { exists: false, notOwner: true };
-      if (onchainId === null || onchainId === undefined) {
-        return { exists: false, noOnchainId: true };
-      }
+      if (!isConnected) return { exists: false, notConnected: true };
+      if (!hasOnchainId) return { exists: false, noOnchainId: true };
       try {
         const result = await onChainApi.verifyStrategyExists(onchainId);
         return result;
@@ -110,9 +106,18 @@ export default function AgentDetailPage() {
         return { exists: false, error: true };
       }
     },
-    enabled: strategyId > 0 && isOwner && isConnected,
+    enabled: strategyId > 0 && hasOnchainId && isConnected,
     staleTime: 30000,
   });
+  
+  // Get on-chain owner from the verified strategy (if exists)
+  const onChainOwner = onChainStatus?.exists 
+    ? (onChainStatus as { strategy?: { owner?: string } })?.strategy?.owner 
+    : undefined;
+  
+  // Strategist identifier for subscriptions - prefer on-chain owner, fallback to creator wallet
+  // The contract uses Linera AccountOwner format, but we can use EVM wallet as lookup key
+  const strategistId = onChainOwner || strategy?.creatorWallet?.toLowerCase();
 
   // Fetch signals from backend (SHARED)
   const { data: signals, isLoading: loadingSignals } = useQuery({
@@ -121,51 +126,88 @@ export default function AgentDetailPage() {
     enabled: strategyId > 0,
   });
 
-  // Check if following (backend for initial state)
-  const { data: followStatus, refetch: refetchFollowStatus } = useQuery({
-    queryKey: ['following', walletAddress, strategyId],
-    queryFn: () => api.checkFollowing(walletAddress!, strategyId),
-    enabled: !!walletAddress && strategyId > 0,
+  // Get subscriber count - use followers from strategy stats
+  const subscriberCount = stats?.followers ?? 0;
+
+  // Check follow status from BACKEND (persisted) - this is the source of truth
+  const { data: followStatus } = useQuery({
+    queryKey: ['follow-status', walletAddress, strategyId],
+    queryFn: async () => {
+      if (!walletAddress || !strategyId) return { isFollowing: false };
+      try {
+        return await api.checkFollowing(walletAddress, strategyId);
+      } catch {
+        return { isFollowing: false };
+      }
+    },
+    enabled: !!walletAddress && strategyId > 0 && !isOwner,
+    staleTime: 10000,
   });
 
-  // Follow/Unfollow mutation - works through BACKEND for shared state
-  // On-chain follow only possible for strategies on THIS user's chain (which means the user owns it)
-  // For OTHER users' strategies, we only use backend (cross-chain data sharing)
-  const followMutation = useMutation({
+  // Subscribe/Unsubscribe (Follow) mutation - saves to BACKEND + on-chain
+  const subscribeMutation = useMutation({
     mutationFn: async () => {
       if (!walletAddress) throw new Error('Wallet not connected');
+      if (!strategyId) throw new Error('Strategy not found');
+
+      // Use local state if set, otherwise use backend status
+      const currentlyFollowing = localSubscribed ?? followStatus?.isFollowing;
       
-      const currentlyFollowing = followStatus?.isFollowing;
-      
-      // ALWAYS update backend (shared data source for all users)
-      // On-chain follow is skipped since strategies exist on different users' chains
       if (currentlyFollowing) {
-        console.log('📊 BACKEND: Unfollowing strategy:', strategyId);
+        // Unfollow
+        console.log('🔔 Unfollowing strategy:', strategyId);
+        
+        // 1. Save to backend first (source of truth)
         await api.unfollowStrategy(walletAddress, strategyId);
-        console.log('✅ Unfollow recorded in backend (shared data)');
+        console.log('✅ Unfollowed in backend');
+        
+        // 2. Also do on-chain if connected (optional, for cross-chain features)
+        if (isConnected && strategistId) {
+          try {
+            await onChainApi.unsubscribeFromStrategist(strategistId);
+            console.log('✅ Unfollowed on-chain');
+          } catch (e) {
+            console.warn('On-chain unfollow failed (non-critical):', e);
+          }
+        }
+        
+        setLocalSubscribed(false);
       } else {
-        console.log('📊 BACKEND: Following strategy:', strategyId);
+        // Follow
+        console.log('🔔 Following strategy:', strategyId);
+        
+        // 1. Save to backend first (source of truth)
         await api.followStrategy(walletAddress, strategyId);
-        console.log('✅ Follow recorded in backend (shared data)');
+        console.log('✅ Followed in backend');
+        
+        // 2. Also do on-chain if connected (optional, for cross-chain features)
+        if (isConnected && strategistId) {
+          try {
+            const strategistChainId = import.meta.env.VITE_LINERA_CHAIN_ID || '';
+            await onChainApi.subscribeToStrategist(strategistId, strategistChainId);
+            console.log('✅ Followed on-chain');
+          } catch (e) {
+            console.warn('On-chain follow failed (non-critical):', e);
+          }
+        }
+        
+        setLocalSubscribed(true);
       }
       
       return !currentlyFollowing;
     },
-    onSuccess: (nowFollowing) => {
-      setIsFollowing(nowFollowing);
+    onSuccess: () => {
       setOnChainError(null);
-      queryClient.invalidateQueries({ queryKey: ['following', walletAddress, strategyId] });
-      queryClient.invalidateQueries({ queryKey: ['strategy', strategyId] });
-      // Refetch to get updated data
-      setTimeout(() => {
-        refetchStrategy();
-        refetchFollowStatus();
-      }, 1000);
+      // Invalidate queries to refresh data from backend
+      queryClient.invalidateQueries({ queryKey: ['follow-status', walletAddress, strategyId] });
+      queryClient.invalidateQueries({ queryKey: ['strategy', strategyId] }); // Refresh follower count
     },
     onError: (error) => {
       console.error('Follow/Unfollow error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to follow/unfollow';
       setOnChainError(errorMsg);
+      // Reset local state on error
+      setLocalSubscribed(null);
     },
   });
 
@@ -452,23 +494,23 @@ export default function AgentDetailPage() {
                 Publish Signal
               </motion.button>
             )}
-            {/* Follow Button - Available to NON-owners (backend-first) */}
-            {!isOwner && walletAddress && (
+            {/* Follow Button - for non-owners */}
+            {!isOwner && walletAddress && strategy?.creatorWallet && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => followMutation.mutate()}
-                disabled={followMutation.isPending}
+                onClick={() => subscribeMutation.mutate()}
+                disabled={subscribeMutation.isPending}
                 className={cn(
                   'flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all',
-                  followStatus?.isFollowing
+                  (localSubscribed ?? followStatus?.isFollowing)
                     ? 'bg-slate-800/50 border border-red-500/50 text-red-400 hover:bg-red-500/10'
                     : 'bg-gradient-to-r from-cyan-500 to-purple-500 text-white shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40'
                 )}
               >
-                {followMutation.isPending ? (
+                {subscribeMutation.isPending ? (
                   <RingLoader size="sm" />
-                ) : followStatus?.isFollowing ? (
+                ) : (localSubscribed ?? followStatus?.isFollowing) ? (
                   <>
                     <UserMinus className="w-4 h-4" />
                     Unfollow
@@ -476,14 +518,15 @@ export default function AgentDetailPage() {
                 ) : (
                   <>
                     <UserPlus className="w-4 h-4" />
-                    Follow Agent
+                    Follow
                   </>
                 )}
               </motion.button>
             )}
+            {/* Subscriber count */}
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <Users className="w-4 h-4" />
-              {formatNumber(safeStats.followers, 0)} followers
+              {subscriberCount} {subscriberCount === 1 ? 'subscriber' : 'subscribers'}
             </div>
           </div>
         </div>

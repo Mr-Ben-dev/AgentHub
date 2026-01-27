@@ -73,6 +73,36 @@
         "is_ai_controlled": false,
         "created_at": "2026-01-16T05:00:25.131Z"
       }
+    ],
+    [
+      4,
+      {
+        "id": 4,
+        "onchain_id": 0,
+        "owner_wallet": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+        "name": "wow",
+        "description": "vc",
+        "market_kind": "Crypto",
+        "base_market": "BTC/USD",
+        "is_public": true,
+        "is_ai_controlled": false,
+        "created_at": "2026-01-27T01:28:26.908Z"
+      }
+    ],
+    [
+      5,
+      {
+        "id": 5,
+        "onchain_id": 1,
+        "owner_wallet": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+        "name": "weda",
+        "description": "bow",
+        "market_kind": "Crypto",
+        "base_market": "BTC/USD",
+        "is_public": true,
+        "is_ai_controlled": false,
+        "created_at": "2026-01-27T03:17:35.696Z"
+      }
     ]
   ],
   "signals": [
@@ -85,13 +115,13 @@
         "direction": "Up",
         "entry_value": 9531423,
         "confidence_bps": 7500,
-        "status": "open",
-        "result": null,
-        "pnl_bps": null,
-        "resolved_value": null,
+        "status": "resolved",
+        "result": "lose",
+        "pnl_bps": -767,
+        "resolved_value": 8800564,
         "created_at": "2026-01-16T04:01:32.823Z",
         "expires_at": "2026-01-17T04:01:32.823Z",
-        "resolved_at": null
+        "resolved_at": "2026-01-26T22:11:39.042Z"
       }
     ],
     [
@@ -103,13 +133,13 @@
         "direction": "Up",
         "entry_value": 9536902,
         "confidence_bps": 7500,
-        "status": "open",
-        "result": null,
-        "pnl_bps": null,
-        "resolved_value": null,
+        "status": "resolved",
+        "result": "lose",
+        "pnl_bps": -772,
+        "resolved_value": 8800564,
         "created_at": "2026-01-16T05:01:39.568Z",
         "expires_at": "2026-01-17T05:01:39.567Z",
-        "resolved_at": null
+        "resolved_at": "2026-01-26T22:11:39.046Z"
       }
     ],
     [
@@ -139,14 +169,14 @@
         "direction": "Up",
         "entry_value": 330646,
         "confidence_bps": 7500,
-        "status": "open",
-        "result": null,
-        "pnl_bps": null,
-        "resolved_value": null,
+        "status": "resolved",
+        "result": "lose",
+        "pnl_bps": -1153,
+        "resolved_value": 292526,
         "asset": "ETH",
         "created_at": "2026-01-16T06:09:30.514Z",
         "expires_at": "2026-01-17T06:09:30.514Z",
-        "resolved_at": null
+        "resolved_at": "2026-01-26T22:11:39.048Z"
       }
     ],
     [
@@ -167,6 +197,25 @@
         "expires_at": "2026-01-16T06:12:43.002Z",
         "resolved_at": "2026-01-16T06:12:52.419Z"
       }
+    ],
+    [
+      7,
+      {
+        "id": 7,
+        "onchain_id": null,
+        "strategy_id": 4,
+        "direction": "Up",
+        "entry_value": 8865300,
+        "confidence_bps": 7500,
+        "status": "open",
+        "result": null,
+        "pnl_bps": null,
+        "resolved_value": null,
+        "asset": "BTC",
+        "created_at": "2026-01-27T03:15:40.331Z",
+        "expires_at": "2026-01-28T03:15:40.329Z",
+        "resolved_at": null
+      }
     ]
   ],
   "strategyStats": [
@@ -177,14 +226,14 @@
         "strategy_id": 1,
         "total_signals": 4,
         "winning_signals": 0,
-        "losing_signals": 2,
+        "losing_signals": 4,
         "win_rate_bps": 0,
-        "avg_pnl_bps": -5,
-        "total_pnl_bps": -11,
+        "avg_pnl_bps": -483,
+        "total_pnl_bps": -1931,
         "best_win_bps": 0,
-        "worst_loss_bps": -8,
+        "worst_loss_bps": -1153,
         "followers_count": 1,
-        "updated_at": "2026-01-16T06:12:52.419Z"
+        "updated_at": "2026-01-26T22:11:39.048Z"
       }
     ],
     [
@@ -211,6 +260,23 @@
         "strategy_id": 3,
         "total_signals": 1,
         "winning_signals": 0,
+        "losing_signals": 1,
+        "win_rate_bps": 0,
+        "avg_pnl_bps": -772,
+        "total_pnl_bps": -772,
+        "best_win_bps": 0,
+        "worst_loss_bps": -772,
+        "followers_count": 1,
+        "updated_at": "2026-01-26T22:11:39.046Z"
+      }
+    ],
+    [
+      4,
+      {
+        "id": 4,
+        "strategy_id": 4,
+        "total_signals": 1,
+        "winning_signals": 0,
         "losing_signals": 0,
         "win_rate_bps": 0,
         "avg_pnl_bps": 0,
@@ -218,7 +284,24 @@
         "best_win_bps": 0,
         "worst_loss_bps": 0,
         "followers_count": 1,
-        "updated_at": "2026-01-16T05:03:11.836Z"
+        "updated_at": "2026-01-27T04:02:24.470Z"
+      }
+    ],
+    [
+      5,
+      {
+        "id": 5,
+        "strategy_id": 5,
+        "total_signals": 0,
+        "winning_signals": 0,
+        "losing_signals": 0,
+        "win_rate_bps": 0,
+        "avg_pnl_bps": 0,
+        "total_pnl_bps": 0,
+        "best_win_bps": 0,
+        "worst_loss_bps": 0,
+        "followers_count": 0,
+        "updated_at": "2026-01-27T03:17:35.696Z"
       }
     ]
   ],
@@ -255,9 +338,117 @@
         "max_exposure_units": 0,
         "created_at": "2026-01-16T05:09:12.492Z"
       }
+    ],
+    [
+      "4-0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      {
+        "id": 4,
+        "strategy_id": 4,
+        "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+        "auto_copy": false,
+        "max_exposure_units": 0,
+        "created_at": "2026-01-27T04:02:24.470Z"
+      }
     ]
   ],
   "activityLogs": [
+    {
+      "id": 24,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "STRATEGY_FOLLOWED",
+      "details": {
+        "strategy_id": 4,
+        "strategy_name": "wow"
+      },
+      "created_at": "2026-01-27T04:02:24.472Z"
+    },
+    {
+      "id": 23,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "STRATEGY_CREATED",
+      "details": {
+        "strategy_id": 5,
+        "strategy_name": "weda",
+        "market_kind": "Crypto",
+        "base_market": "BTC/USD"
+      },
+      "created_at": "2026-01-27T03:17:35.697Z"
+    },
+    {
+      "id": 22,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "SIGNAL_PUBLISHED",
+      "details": {
+        "signal_id": 7,
+        "strategy_id": 4,
+        "strategy_name": "wow",
+        "direction": "Up",
+        "confidence_bps": 7500,
+        "entry_value": 8865300
+      },
+      "created_at": "2026-01-27T03:15:40.331Z"
+    },
+    {
+      "id": 21,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "STRATEGY_CREATED",
+      "details": {
+        "strategy_id": 4,
+        "strategy_name": "wow",
+        "market_kind": "Crypto",
+        "base_market": "BTC/USD"
+      },
+      "created_at": "2026-01-27T01:28:26.909Z"
+    },
+    {
+      "id": 20,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 5,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "result": "lose",
+        "pnl_bps": -1153,
+        "direction": "Up"
+      },
+      "created_at": "2026-01-26T22:11:39.050Z"
+    },
+    {
+      "id": 19,
+      "wallet_address": "0xdb7a15fb76de03a7ee78f6386ed14e3954be3ad8",
+      "username": "COOL",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 2,
+        "strategy_id": 3,
+        "strategy_name": "BTC KING 2",
+        "result": "lose",
+        "pnl_bps": -772,
+        "direction": "Up"
+      },
+      "created_at": "2026-01-26T22:11:39.047Z"
+    },
+    {
+      "id": 18,
+      "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
+      "username": "nomk",
+      "action": "SIGNAL_RESOLVED",
+      "details": {
+        "signal_id": 1,
+        "strategy_id": 1,
+        "strategy_name": "BTC strategies ",
+        "result": "lose",
+        "pnl_bps": -767,
+        "direction": "Up"
+      },
+      "created_at": "2026-01-26T22:11:39.046Z"
+    },
     {
       "id": 17,
       "wallet_address": "0x00c0d1e98a1d420f9424e1a50a832a1f228d9f74",
@@ -488,9 +679,9 @@
   ],
   "counters": {
     "nextStrategistId": 3,
-    "nextStrategyId": 4,
-    "nextSignalId": 7,
-    "nextFollowerId": 4,
-    "nextActivityId": 18
+    "nextStrategyId": 6,
+    "nextSignalId": 8,
+    "nextFollowerId": 5,
+    "nextActivityId": 25
   }
 }

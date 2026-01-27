@@ -156,6 +156,27 @@ pub struct FollowerKey {
     pub follower: AccountOwner,
 }
 
+/// Subscription for following a strategist cross-chain
+#[derive(Debug, Clone, Serialize, Deserialize, SimpleObject)]
+pub struct Subscription {
+    pub id: String,
+    pub subscriber: AccountOwner,
+    pub subscriber_chain_id: String,
+    pub strategist: AccountOwner,
+    pub strategist_chain_id: String,
+    pub start_timestamp: u64,
+    pub end_timestamp: u64,
+    pub is_active: bool,
+}
+
+/// Subscription offer set by a strategist
+#[derive(Debug, Clone, Serialize, Deserialize, SimpleObject)]
+pub struct SubscriptionOffer {
+    pub strategist: AccountOwner,
+    pub description: Option<String>,
+    pub is_enabled: bool,
+}
+
 // ============================================================================
 // INPUT TYPES (for GraphQL mutations)
 // ============================================================================
@@ -232,6 +253,25 @@ pub enum Operation {
     
     /// Update strategy stats (internal, called after signal resolution)
     UpdateStats { strategy_id: u64 },
+    
+    /// Enable subscription for this strategist (allow others to subscribe)
+    EnableSubscription {
+        description: Option<String>,
+    },
+    
+    /// Disable subscription for this strategist
+    DisableSubscription,
+    
+    /// Subscribe to a strategist (cross-chain subscription)
+    SubscribeToStrategist {
+        strategist: AccountOwner,
+        strategist_chain_id: String,
+    },
+    
+    /// Unsubscribe from a strategist
+    UnsubscribeFromStrategist {
+        strategist: AccountOwner,
+    },
 }
 
 /// Messages that can be sent between chains
@@ -243,6 +283,25 @@ pub enum Message {
         strategy_id: u64,
         result: SignalResult,
         pnl_bps: i64,
+    },
+    /// Subscription payment/request from subscriber to strategist
+    SubscriptionRequest {
+        subscriber: AccountOwner,
+        subscriber_chain_id: String,
+        timestamp: u64,
+    },
+    /// Subscription confirmation from strategist to subscriber
+    SubscriptionConfirmed {
+        subscription_id: String,
+        strategist: AccountOwner,
+        strategist_chain_id: String,
+        end_timestamp: u64,
+    },
+    /// Signal broadcast to subscribers
+    SignalBroadcast {
+        signal: Signal,
+        strategy_name: String,
+        strategist: AccountOwner,
     },
 }
 
@@ -257,6 +316,10 @@ pub enum AgentHubResponse {
     SignalCancelled { id: u64 },
     Followed { strategy_id: u64 },
     Unfollowed { strategy_id: u64 },
+    SubscriptionEnabled { strategist: AccountOwner },
+    SubscriptionDisabled { strategist: AccountOwner },
+    Subscribed { subscription_id: String },
+    Unsubscribed { strategist: AccountOwner },
     Error { message: String },
 }
 
@@ -295,6 +358,15 @@ pub enum AgentHubError {
     
     #[error("Invalid confidence value")]
     InvalidConfidence,
+    
+    #[error("Subscription not enabled")]
+    SubscriptionNotEnabled,
+    
+    #[error("Already subscribed")]
+    AlreadySubscribed,
+    
+    #[error("Not subscribed")]
+    NotSubscribed,
     
     #[error("Internal error: {0}")]
     Internal(String),

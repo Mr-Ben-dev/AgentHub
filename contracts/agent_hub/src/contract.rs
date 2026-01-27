@@ -5,7 +5,7 @@ mod state;
 use agent_hub::{
     AgentHubAbi, AgentHubError, AgentHubResponse, AgentStrategy, Direction, Follower, 
     FollowerKey, InstantiationArgument, Message, Operation, Signal, SignalResult, 
-    SignalStatus, StrategyStats,
+    SignalStatus, StrategyStats, Subscription, SubscriptionOffer,
 };
 use linera_sdk::{
     linera_base_types::{AccountOwner, ChainId, WithContractAbi},
@@ -48,6 +48,7 @@ impl Contract for AgentHubContract {
         // Initialize counters
         self.state.next_strategy_id.set(1);
         self.state.next_signal_id.set(1);
+        self.state.next_subscription_id.set(1);
     }
 
     async fn execute_operation(&mut self, operation: Operation) -> AgentHubResponse {
@@ -102,6 +103,18 @@ impl Contract for AgentHubContract {
             Operation::UpdateStats { strategy_id } => {
                 self.update_strategy_stats(strategy_id).await
             }
+            Operation::EnableSubscription { description } => {
+                self.enable_subscription(owner, description).await
+            }
+            Operation::DisableSubscription => {
+                self.disable_subscription(owner).await
+            }
+            Operation::SubscribeToStrategist { strategist, strategist_chain_id } => {
+                self.subscribe_to_strategist(owner, strategist, strategist_chain_id).await
+            }
+            Operation::UnsubscribeFromStrategist { strategist } => {
+                self.unsubscribe_from_strategist(owner, strategist).await
+            }
         }
     }
 
@@ -115,6 +128,111 @@ impl Contract for AgentHubContract {
             } => {
                 // Update stats on message receive (for cross-chain sync)
                 let _ = self.update_strategy_stats(strategy_id).await;
+            }
+            Message::SubscriptionRequest {
+                subscriber,
+                subscriber_chain_id,
+                timestamp,
+            } => {
+                // Handle incoming subscription request on strategist's chain
+                let strategist = self.runtime.authenticated_signer()
+                    .map(AccountOwner::from)
+                    .unwrap_or(subscriber.clone());
+                
+                // Check if subscription is enabled
+                if let Ok(Some(offer)) = self.state.subscription_offers.get(&strategist).await {
+                    if offer.is_enabled {
+                        // Generate subscription ID
+                        let sub_id = *self.state.next_subscription_id.get();
+                        self.state.next_subscription_id.set(sub_id + 1);
+                        
+                        let subscription_id = format!("sub-{}-{}", sub_id, timestamp);
+                        
+                        // 30 days subscription duration
+                        const THIRTY_DAYS_MICROS: u64 = 30 * 24 * 60 * 60 * 1_000_000;
+                        let end_timestamp = timestamp + THIRTY_DAYS_MICROS;
+                        
+                        let chain_id = self.runtime.chain_id();
+                        
+                        let subscription = Subscription {
+                            id: subscription_id.clone(),
+                            subscriber: subscriber.clone(),
+                            subscriber_chain_id: subscriber_chain_id.clone(),
+                            strategist: strategist.clone(),
+                            strategist_chain_id: chain_id.to_string(),
+                            start_timestamp: timestamp,
+                            end_timestamp,
+                            is_active: true,
+                        };
+                        
+                        // Store subscription
+                        self.state.subscriptions.insert(&subscription_id, subscription)
+                            .expect("Failed to store subscription");
+                        
+                        // Add to strategist's subscribers list
+                        let mut subs = self.state.subscribers_by_strategist.get(&strategist).await
+                            .ok().flatten().unwrap_or_default();
+                        subs.push(subscription_id.clone());
+                        self.state.subscribers_by_strategist.insert(&strategist, subs)
+                            .expect("Failed to update subscribers list");
+                        
+                        // Send confirmation back to subscriber's chain
+                        if let Ok(sub_chain) = subscriber_chain_id.parse::<ChainId>() {
+                            self.runtime.prepare_message(Message::SubscriptionConfirmed {
+                                subscription_id,
+                                strategist: strategist.clone(),
+                                strategist_chain_id: chain_id.to_string(),
+                                end_timestamp,
+                            }).send_to(sub_chain);
+                        }
+                    }
+                }
+            }
+            Message::SubscriptionConfirmed {
+                subscription_id,
+                strategist,
+                strategist_chain_id,
+                end_timestamp,
+            } => {
+                // Handle subscription confirmation on subscriber's chain
+                let subscriber = self.runtime.authenticated_signer()
+                    .map(AccountOwner::from)
+                    .unwrap_or(strategist.clone());
+                
+                let chain_id = self.runtime.chain_id();
+                let timestamp = self.now().micros();
+                
+                let subscription = Subscription {
+                    id: subscription_id.clone(),
+                    subscriber: subscriber.clone(),
+                    subscriber_chain_id: chain_id.to_string(),
+                    strategist: strategist.clone(),
+                    strategist_chain_id,
+                    start_timestamp: timestamp,
+                    end_timestamp,
+                    is_active: true,
+                };
+                
+                // Store subscription locally
+                self.state.subscriptions.insert(&subscription_id, subscription)
+                    .expect("Failed to store subscription");
+                
+                // Add to subscriber's subscriptions list
+                let mut subs = self.state.subscriptions_by_subscriber.get(&subscriber).await
+                    .ok().flatten().unwrap_or_default();
+                subs.push(subscription_id);
+                self.state.subscriptions_by_subscriber.insert(&subscriber, subs)
+                    .expect("Failed to update subscriptions list");
+            }
+            Message::SignalBroadcast {
+                signal,
+                strategy_name: _,
+                strategist: _,
+            } => {
+                // Store received signal from subscribed strategist
+                let signal_id = signal.id;
+                self.state.signals.insert(&signal_id, signal)
+                    .expect("Failed to store broadcast signal");
             }
         }
     }
@@ -504,5 +622,116 @@ impl AgentHubContract {
             .expect("Failed to update stats");
 
         AgentHubResponse::Ok
+    }
+
+    // =========================================================================
+    // Subscription Methods
+    // =========================================================================
+
+    /// Enable subscription for this strategist
+    async fn enable_subscription(
+        &mut self,
+        owner: AccountOwner,
+        description: Option<String>,
+    ) -> AgentHubResponse {
+        // Check if strategist is registered
+        if !self.state.strategists.contains_key(&owner).await.unwrap_or(false) {
+            return AgentHubError::StrategistNotRegistered.into();
+        }
+
+        let offer = SubscriptionOffer {
+            strategist: owner.clone(),
+            description,
+            is_enabled: true,
+        };
+
+        self.state.subscription_offers.insert(&owner, offer)
+            .expect("Failed to enable subscription");
+
+        AgentHubResponse::SubscriptionEnabled { strategist: owner }
+    }
+
+    /// Disable subscription for this strategist
+    async fn disable_subscription(&mut self, owner: AccountOwner) -> AgentHubResponse {
+        // Check if subscription offer exists
+        if let Ok(Some(mut offer)) = self.state.subscription_offers.get(&owner).await {
+            offer.is_enabled = false;
+            self.state.subscription_offers.insert(&owner, offer)
+                .expect("Failed to disable subscription");
+        }
+
+        AgentHubResponse::SubscriptionDisabled { strategist: owner }
+    }
+
+    /// Subscribe to a strategist (sends cross-chain message)
+    async fn subscribe_to_strategist(
+        &mut self,
+        subscriber: AccountOwner,
+        strategist: AccountOwner,
+        strategist_chain_id: String,
+    ) -> AgentHubResponse {
+        // Check if already subscribed
+        let existing_subs = self.state.subscriptions_by_subscriber.get(&subscriber).await
+            .ok().flatten().unwrap_or_default();
+        
+        for sub_id in &existing_subs {
+            if let Ok(Some(sub)) = self.state.subscriptions.get(sub_id).await {
+                if sub.strategist == strategist && sub.is_active {
+                    return AgentHubError::AlreadySubscribed.into();
+                }
+            }
+        }
+
+        let timestamp = self.now().micros();
+        let subscriber_chain_id = self.runtime.chain_id().to_string();
+
+        // Send subscription request to strategist's chain
+        if let Ok(target_chain) = strategist_chain_id.parse::<ChainId>() {
+            self.runtime.prepare_message(Message::SubscriptionRequest {
+                subscriber: subscriber.clone(),
+                subscriber_chain_id,
+                timestamp,
+            }).send_to(target_chain);
+        }
+
+        // Return pending status - actual subscription is created when confirmation arrives
+        AgentHubResponse::Subscribed { 
+            subscription_id: format!("pending-{}", timestamp) 
+        }
+    }
+
+    /// Unsubscribe from a strategist
+    async fn unsubscribe_from_strategist(
+        &mut self,
+        subscriber: AccountOwner,
+        strategist: AccountOwner,
+    ) -> AgentHubResponse {
+        // Find active subscription
+        let existing_subs = self.state.subscriptions_by_subscriber.get(&subscriber).await
+            .ok().flatten().unwrap_or_default();
+        
+        let mut found_sub_id: Option<String> = None;
+        
+        for sub_id in &existing_subs {
+            if let Ok(Some(sub)) = self.state.subscriptions.get(sub_id).await {
+                if sub.strategist == strategist && sub.is_active {
+                    found_sub_id = Some(sub_id.clone());
+                    break;
+                }
+            }
+        }
+
+        match found_sub_id {
+            Some(sub_id) => {
+                // Mark subscription as inactive
+                if let Ok(Some(mut sub)) = self.state.subscriptions.get(&sub_id).await {
+                    sub.is_active = false;
+                    self.state.subscriptions.insert(&sub_id, sub)
+                        .expect("Failed to update subscription");
+                }
+                AgentHubResponse::Unsubscribed { strategist }
+            }
+            None => AgentHubError::NotSubscribed.into(),
+        }
     }
 }

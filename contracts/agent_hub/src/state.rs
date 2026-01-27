@@ -2,6 +2,7 @@
 
 use agent_hub::{
     AgentStrategy, Follower, FollowerKey, Signal, StrategyStats, Strategist,
+    Subscription, SubscriptionOffer,
 };
 use linera_sdk::{
     linera_base_types::{AccountOwner, ChainId},
@@ -41,4 +42,23 @@ pub struct AgentHubState {
     
     /// Counter for next signal ID
     pub next_signal_id: RegisterView<u64>,
+    
+    // =========================================================================
+    // Subscription State
+    // =========================================================================
+    
+    /// Subscription offers by strategist (strategist -> SubscriptionOffer)
+    pub subscription_offers: MapView<AccountOwner, SubscriptionOffer>,
+    
+    /// Active subscriptions (subscription_id -> Subscription)
+    pub subscriptions: MapView<String, Subscription>,
+    
+    /// Subscriptions by subscriber (subscriber -> list of subscription IDs)
+    pub subscriptions_by_subscriber: MapView<AccountOwner, Vec<String>>,
+    
+    /// Subscribers by strategist (strategist -> list of subscription IDs)
+    pub subscribers_by_strategist: MapView<AccountOwner, Vec<String>>,
+    
+    /// Counter for subscription ID
+    pub next_subscription_id: RegisterView<u64>,
 }
