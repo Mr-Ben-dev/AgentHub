@@ -2,7 +2,7 @@
 // AgentDetailPage - Premium Agent View with Lucide Icons
 // ============================================================================
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -75,6 +75,8 @@ export default function AgentDetailPage() {
   const [onChainError, setOnChainError] = useState<string | null>(null);
   // Local subscription state for instant UI feedback
   const [localSubscribed, setLocalSubscribed] = useState<boolean | null>(null);
+  // Capture the initial follow state once so optimistic count delta is correct
+  const initialFollowStateRef = useRef<boolean | null>(null);
 
   // Fetch strategy details from backend (SHARED data source)
   const { data: strategyData, isLoading: loadingStrategy } = useQuery({
@@ -126,14 +128,41 @@ export default function AgentDetailPage() {
     enabled: strategyId > 0,
   });
 
-  // Get subscriber count - use followers from strategy stats
-  const subscriberCount = stats?.followers ?? 0;
-
-  // Check follow status from BACKEND (persisted) - this is the source of truth
+  // Check follow status - uses local state (set by mutation) as primary,
+  // on-chain check when available, backend as initial seed
   const { data: followStatus } = useQuery({
-    queryKey: ['follow-status', walletAddress, strategyId],
+    queryKey: ['follow-status', walletAddress, strategyId, isConnected, strategistId],
     queryFn: async () => {
       if (!walletAddress || !strategyId) return { isFollowing: false };
+      
+      // If we have local state from a mutation, trust it (cross-chain is async)
+      if (localSubscribed !== null) {
+        return { isFollowing: localSubscribed };
+      }
+      
+      // PRIMARY: Check on-chain subscription status when connected
+      if (isConnected && strategistId) {
+        try {
+          const isSubscribed = await onChainApi.isSubscribed(strategistId);
+          console.log('🔗 On-chain subscription status:', isSubscribed);
+          if (isSubscribed) return { isFollowing: true };
+        } catch (e) {
+          console.warn('On-chain subscription check failed:', e);
+        }
+        
+        // Also try on-chain follow status by strategy ID
+        if (hasOnchainId && onchainId !== null && onchainId !== undefined) {
+          try {
+            const onChainFollowing = await onChainApi.isFollowing(walletAddress, onchainId);
+            console.log('🔗 On-chain follow status:', onChainFollowing);
+            if (onChainFollowing) return { isFollowing: true };
+          } catch (e) {
+            console.warn('On-chain follow check failed:', e);
+          }
+        }
+      }
+      
+      // FALLBACK: Backend cache (initial page load / not connected)
       try {
         return await api.checkFollowing(walletAddress, strategyId);
       } catch {
@@ -141,53 +170,78 @@ export default function AgentDetailPage() {
       }
     },
     enabled: !!walletAddress && strategyId > 0 && !isOwner,
-    staleTime: 10000,
+    staleTime: 15000,
   });
 
-  // Subscribe/Unsubscribe (Follow) mutation - saves to BACKEND + on-chain
+  // Subscriber count - from backend stats, adjusted by local subscription state
+  // (on-chain subscriber data lives on hub chain, not queryable from user's microchain)
+  const baseCount = stats?.followers ?? 0;
+  // Capture initial follow state once (from first followStatus query result)
+  if (initialFollowStateRef.current === null && followStatus?.isFollowing !== undefined) {
+    initialFollowStateRef.current = followStatus.isFollowing;
+  }
+  const initiallySubscribed = initialFollowStateRef.current ?? false;
+  // Compute delta: only adjust count when current state DIFFERS from initial state
+  const subscriberCount = localSubscribed === null
+    ? baseCount  // no interaction yet, trust backend
+    : localSubscribed === initiallySubscribed
+      ? baseCount  // back to original state, no delta
+      : localSubscribed
+        ? baseCount + 1   // newly subscribed (wasn't before)
+        : Math.max(0, baseCount - 1);  // newly unsubscribed (was before)
+
+  // Subscribe/Unsubscribe (Follow) mutation - 100% ON-CHAIN ONLY, no backend calls
   const subscribeMutation = useMutation({
     mutationFn: async () => {
       if (!walletAddress) throw new Error('Wallet not connected');
       if (!strategyId) throw new Error('Strategy not found');
+      if (!strategistId) throw new Error('Cannot determine strategist identity');
+
+      // Ensure connected to Linera Conway testnet
+      if (!isConnected) {
+        console.log('🔗 Connecting to Conway for on-chain follow...');
+        await connect();
+      }
+
+      const strategistChainId = import.meta.env.VITE_LINERA_CHAIN_ID || '';
 
       // Use local state if set, otherwise use backend status
       const currentlyFollowing = localSubscribed ?? followStatus?.isFollowing;
       
       if (currentlyFollowing) {
-        // Unfollow
-        console.log('🔔 Unfollowing strategy:', strategyId);
+        // ===== UNFOLLOW - 100% ON-CHAIN =====
+        console.log('🔔 Unfollowing on-chain:', strategyId);
         
-        // 1. Save to backend first (source of truth)
-        await api.unfollowStrategy(walletAddress, strategyId);
-        console.log('✅ Unfollowed in backend');
+        // Cross-chain unsubscribe (source of truth)
+        await onChainApi.unsubscribeFromStrategist(strategistId);
+        console.log('✅ On-chain unsubscription confirmed');
         
-        // 2. Also do on-chain if connected (optional, for cross-chain features)
-        if (isConnected && strategistId) {
+        // Also unfollow by strategy ID if it exists on-chain
+        if (hasOnchainId && onchainId !== null && onchainId !== undefined) {
           try {
-            await onChainApi.unsubscribeFromStrategist(strategistId);
-            console.log('✅ Unfollowed on-chain');
+            await onChainApi.unfollowStrategy(onchainId);
+            console.log('✅ On-chain unfollowStrategy completed');
           } catch (e) {
-            console.warn('On-chain unfollow failed (non-critical):', e);
+            console.warn('unfollowStrategy note:', e);
           }
         }
         
         setLocalSubscribed(false);
       } else {
-        // Follow
-        console.log('🔔 Following strategy:', strategyId);
+        // ===== FOLLOW - 100% ON-CHAIN =====
+        console.log('🔔 Following on-chain:', strategyId);
         
-        // 1. Save to backend first (source of truth)
-        await api.followStrategy(walletAddress, strategyId);
-        console.log('✅ Followed in backend');
+        // Cross-chain subscription (source of truth - if this fails, whole op fails)
+        await onChainApi.subscribeToStrategist(strategistId, strategistChainId);
+        console.log('✅ On-chain subscription confirmed');
         
-        // 2. Also do on-chain if connected (optional, for cross-chain features)
-        if (isConnected && strategistId) {
+        // Also follow by strategy ID if it exists on-chain
+        if (hasOnchainId && onchainId !== null && onchainId !== undefined) {
           try {
-            const strategistChainId = import.meta.env.VITE_LINERA_CHAIN_ID || '';
-            await onChainApi.subscribeToStrategist(strategistId, strategistChainId);
-            console.log('✅ Followed on-chain');
+            await onChainApi.followStrategy(onchainId);
+            console.log('✅ On-chain followStrategy completed');
           } catch (e) {
-            console.warn('On-chain follow failed (non-critical):', e);
+            console.warn('followStrategy note:', e);
           }
         }
         
@@ -198,9 +252,8 @@ export default function AgentDetailPage() {
     },
     onSuccess: () => {
       setOnChainError(null);
-      // Invalidate queries to refresh data from backend
-      queryClient.invalidateQueries({ queryKey: ['follow-status', walletAddress, strategyId] });
-      queryClient.invalidateQueries({ queryKey: ['strategy', strategyId] }); // Refresh follower count
+      // No backend sync needed - on-chain tx is the source of truth
+      // Count is optimistically updated via localSubscribed state
     },
     onError: (error) => {
       console.error('Follow/Unfollow error:', error);
@@ -223,25 +276,23 @@ export default function AgentDetailPage() {
         await connect();
       }
       
-      // Use on-chain ID for chain operations (owner must have this)
-      if (onchainId === null || onchainId === undefined) {
-        throw new Error('Strategy is not on-chain yet. Please wait for chain sync.');
-      }
-      
-      console.log('🔗 ON-CHAIN: Publishing signal for strategy (onchain_id:', onchainId, ')');
-      
       // Convert confidence % to basis points (0-10000)
       const confidenceBps = signalForm.confidence * 100;
       // Convert hours to seconds
       const horizonSecs = signalForm.horizonHours * 3600;
       
-      // Publish on-chain using onchainId
-      const signalId = await onChainApi.publishSignal({
-        strategyId: onchainId,
-        direction: signalForm.direction,
-        horizonSecs,
-        confidenceBps,
-      });
+      // Try on-chain publish if strategy exists on-chain
+      if (onchainId !== null && onchainId !== undefined && onChainStatus?.exists) {
+        console.log('🔗 ON-CHAIN: Publishing signal for strategy (onchain_id:', onchainId, ')');
+        await onChainApi.publishSignal({
+          strategyId: onchainId,
+          direction: signalForm.direction,
+          horizonSecs,
+          confidenceBps,
+        });
+      } else {
+        console.log('📦 Strategy not on-chain yet, publishing to backend only');
+      }
       
       // Also create in backend for display to ALL users
       const backendDirection = signalForm.direction === 'Long' ? 'Up' : 'Down';
@@ -251,10 +302,10 @@ export default function AgentDetailPage() {
         direction: backendDirection,
         horizonSecs,
         confidenceBps,
-        asset: signalForm.asset,  // Pass the selected asset (BTC/USD or ETH/USD)
+        asset: signalForm.asset,
       });
       
-      return signalId;
+      return 0;
     },
     onSuccess: (signalId) => {
       console.log('✅ Signal published:', signalId);
@@ -268,6 +319,45 @@ export default function AgentDetailPage() {
       console.error('Publish signal error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Failed to publish signal';
       setOnChainError(errorMsg);
+    },
+  });
+
+  // Publish strategy TO CHAIN mutation - owner can push existing backend strategy on-chain
+  const publishToChainMutation = useMutation({
+    mutationFn: async () => {
+      if (!walletAddress || !strategy) throw new Error('Missing data');
+      if (!isConnected) {
+        console.log('🔗 Connecting to Conway...');
+        await connect();
+      }
+
+      console.log('🔗 Creating strategy on-chain...');
+      const newOnchainId = await onChainApi.createStrategy({
+        name: strategy.name,
+        description: strategy.description || '',
+        marketKind: strategy.marketKind || 'Crypto',
+        baseMarket: strategy.marketKind === 'Crypto' ? 'BTC-USD' : 'General',
+        isPublic: strategy.isPublic ?? true,
+        isAiControlled: false,
+      });
+      console.log('✅ Strategy created on-chain, ID:', newOnchainId);
+
+      // Link to backend
+      if (newOnchainId !== undefined) {
+        await api.linkStrategyOnchain(strategyId, newOnchainId);
+        console.log('✅ Linked backend ID', strategyId, '→ on-chain ID', newOnchainId);
+      }
+
+      return newOnchainId;
+    },
+    onSuccess: () => {
+      setOnChainError(null);
+      queryClient.invalidateQueries({ queryKey: ['strategy', strategyId] });
+      queryClient.invalidateQueries({ queryKey: ['strategy-onchain-verify'] });
+    },
+    onError: (error) => {
+      const msg = error instanceof Error ? error.message : 'Failed to publish to chain';
+      setOnChainError(msg);
     },
   });
 
@@ -406,10 +496,18 @@ export default function AgentDetailPage() {
                   On-Chain Verified
                 </span>
               ) : isOwner && isConnected ? (
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 text-sm font-medium">
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                  Syncing to Chain...
-                </span>
+                <button
+                  onClick={() => publishToChainMutation.mutate()}
+                  disabled={publishToChainMutation.isPending}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-sm font-medium hover:bg-cyan-500/30 transition-colors cursor-pointer"
+                >
+                  {publishToChainMutation.isPending ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  {publishToChainMutation.isPending ? 'Publishing...' : 'Publish to Chain'}
+                </button>
               ) : !isOwner && onchainId !== null ? (
                 <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 text-sm font-medium">
                   <Zap className="w-3.5 h-3.5" />
@@ -458,39 +556,16 @@ export default function AgentDetailPage() {
               </div>
             )}
             
-            {/* Off-Chain Warning - Only shown to OWNER */}
-            {isOwner && isConnected && !checkingOnChain && !onChainStatus?.exists && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm max-w-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-medium">Strategy Syncing</p>
-                  <p className="text-amber-400/80 text-xs">
-                    Your strategy is syncing to Linera blockchain. 
-                    Please wait for confirmation before publishing signals.
-                  </p>
-                </div>
-              </div>
-            )}
             
             {/* Publish Signal Button - Only for owner */}
             {isOwner && walletAddress && (
               <motion.button
-                whileHover={{ scale: onChainStatus?.exists ? 1.05 : 1 }}
-                whileTap={{ scale: onChainStatus?.exists ? 0.95 : 1 }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowSignalModal(true)}
-                disabled={!onChainStatus?.exists || checkingOnChain}
-                className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all",
-                  onChainStatus?.exists
-                    ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
-                    : "bg-slate-700/50 text-slate-500 cursor-not-allowed"
-                )}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all bg-gradient-to-r from-emerald-500 to-cyan-500 text-white shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40"
               >
-                {checkingOnChain ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Zap className="w-4 h-4" />
-                )}
+                <Zap className="w-4 h-4" />
                 Publish Signal
               </motion.button>
             )}

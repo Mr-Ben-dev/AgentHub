@@ -288,6 +288,7 @@ pub enum Message {
     SubscriptionRequest {
         subscriber: AccountOwner,
         subscriber_chain_id: String,
+        strategist: AccountOwner,
         timestamp: u64,
     },
     /// Subscription confirmation from strategist to subscriber
@@ -388,6 +389,53 @@ impl From<AgentHubError> for AgentHubResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstantiationArgument {
     pub hub_chain_id: String,
+}
+
+// ============================================================================
+// EVENTS (for cross-chain event-driven subscriptions)
+// ============================================================================
+
+/// Events emitted by the AgentHub contract.
+/// Subscribers can listen for these events on the strategist's chain
+/// to receive real-time notifications without polling.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AgentHubEvent {
+    /// Emitted when a new signal is published (subscribers auto-receive)
+    SignalPublished {
+        strategy_id: u64,
+        signal_id: u64,
+        direction: Direction,
+        confidence_bps: u16,
+    },
+    /// Emitted when a signal is resolved
+    SignalResolved {
+        strategy_id: u64,
+        signal_id: u64,
+        result: SignalResult,
+        pnl_bps: i64,
+    },
+    /// Emitted when a strategy gains a follower
+    StrategyFollowed {
+        strategy_id: u64,
+        follower: AccountOwner,
+    },
+    /// Emitted when a strategy loses a follower
+    StrategyUnfollowed {
+        strategy_id: u64,
+        follower: AccountOwner,
+    },
+    /// Emitted when a cross-chain subscription is created
+    SubscriptionCreated {
+        subscription_id: String,
+        subscriber: AccountOwner,
+        strategist: AccountOwner,
+    },
+    /// Emitted when a subscription is cancelled
+    SubscriptionCancelled {
+        subscription_id: String,
+        subscriber: AccountOwner,
+        strategist: AccountOwner,
+    },
 }
 
 // ============================================================================

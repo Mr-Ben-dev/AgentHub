@@ -3,12 +3,12 @@
 mod state;
 
 use agent_hub::{
-    AgentHubAbi, AgentHubError, AgentHubResponse, AgentStrategy, Direction, Follower, 
-    FollowerKey, InstantiationArgument, Message, Operation, Signal, SignalResult, 
+    AgentHubAbi, AgentHubError, AgentHubEvent, AgentHubResponse, AgentStrategy, Direction, 
+    Follower, FollowerKey, InstantiationArgument, Message, Operation, Signal, SignalResult, 
     SignalStatus, StrategyStats, Subscription, SubscriptionOffer,
 };
 use linera_sdk::{
-    linera_base_types::{AccountOwner, ChainId, WithContractAbi},
+    linera_base_types::{AccountOwner, ChainId, StreamName, WithContractAbi},
     views::{RootView, View},
     Contract, ContractRuntime,
 };
@@ -31,7 +31,7 @@ impl Contract for AgentHubContract {
     type Message = Message;
     type Parameters = ();
     type InstantiationArgument = InstantiationArgument;
-    type EventValue = ();
+    type EventValue = AgentHubEvent;
 
     async fn load(runtime: ContractRuntime<Self>) -> Self {
         let state = AgentHubState::load(runtime.root_view_storage_context())
@@ -132,60 +132,62 @@ impl Contract for AgentHubContract {
             Message::SubscriptionRequest {
                 subscriber,
                 subscriber_chain_id,
+                strategist,
                 timestamp,
             } => {
                 // Handle incoming subscription request on strategist's chain
-                let strategist = self.runtime.authenticated_signer()
-                    .map(AccountOwner::from)
-                    .unwrap_or(subscriber.clone());
+                // The strategist is now passed in the message (not derived from signer)
                 
-                // Check if subscription is enabled
-                if let Ok(Some(offer)) = self.state.subscription_offers.get(&strategist).await {
-                    if offer.is_enabled {
-                        // Generate subscription ID
-                        let sub_id = *self.state.next_subscription_id.get();
-                        self.state.next_subscription_id.set(sub_id + 1);
-                        
-                        let subscription_id = format!("sub-{}-{}", sub_id, timestamp);
-                        
-                        // 30 days subscription duration
-                        const THIRTY_DAYS_MICROS: u64 = 30 * 24 * 60 * 60 * 1_000_000;
-                        let end_timestamp = timestamp + THIRTY_DAYS_MICROS;
-                        
-                        let chain_id = self.runtime.chain_id();
-                        
-                        let subscription = Subscription {
-                            id: subscription_id.clone(),
-                            subscriber: subscriber.clone(),
-                            subscriber_chain_id: subscriber_chain_id.clone(),
-                            strategist: strategist.clone(),
-                            strategist_chain_id: chain_id.to_string(),
-                            start_timestamp: timestamp,
-                            end_timestamp,
-                            is_active: true,
-                        };
-                        
-                        // Store subscription
-                        self.state.subscriptions.insert(&subscription_id, subscription)
-                            .expect("Failed to store subscription");
-                        
-                        // Add to strategist's subscribers list
-                        let mut subs = self.state.subscribers_by_strategist.get(&strategist).await
-                            .ok().flatten().unwrap_or_default();
-                        subs.push(subscription_id.clone());
-                        self.state.subscribers_by_strategist.insert(&strategist, subs)
-                            .expect("Failed to update subscribers list");
-                        
-                        // Send confirmation back to subscriber's chain
-                        if let Ok(sub_chain) = subscriber_chain_id.parse::<ChainId>() {
-                            self.runtime.prepare_message(Message::SubscriptionConfirmed {
-                                subscription_id,
-                                strategist: strategist.clone(),
-                                strategist_chain_id: chain_id.to_string(),
-                                end_timestamp,
-                            }).send_to(sub_chain);
-                        }
-                    }
+                // Generate subscription ID
+                let sub_id = *self.state.next_subscription_id.get();
+                self.state.next_subscription_id.set(sub_id + 1);
+                
+                let subscription_id = format!("sub-{}-{}", sub_id, timestamp);
+                
+                // 30 days subscription duration
+                const THIRTY_DAYS_MICROS: u64 = 30 * 24 * 60 * 60 * 1_000_000;
+                let end_timestamp = timestamp + THIRTY_DAYS_MICROS;
+                
+                let chain_id = self.runtime.chain_id();
+                
+                let subscription = Subscription {
+                    id: subscription_id.clone(),
+                    subscriber: subscriber.clone(),
+                    subscriber_chain_id: subscriber_chain_id.clone(),
+                    strategist: strategist.clone(),
+                    strategist_chain_id: chain_id.to_string(),
+                    start_timestamp: timestamp,
+                    end_timestamp,
+                    is_active: true,
+                };
+                
+                // Store subscription
+                self.state.subscriptions.insert(&subscription_id, subscription)
+                    .expect("Failed to store subscription");
+                
+                // Add to strategist's subscribers list
+                let mut subs = self.state.subscribers_by_strategist.get(&strategist).await
+                    .ok().flatten().unwrap_or_default();
+                subs.push(subscription_id.clone());
+                self.state.subscribers_by_strategist.insert(&strategist, subs)
+                    .expect("Failed to update subscribers list");
+                
+                // Emit event for subscription created
+                let stream = StreamName::from(b"subscriptions");
+                self.runtime.emit(stream, &AgentHubEvent::SubscriptionCreated {
+                    subscription_id: subscription_id.clone(),
+                    subscriber: subscriber.clone(),
+                    strategist: strategist.clone(),
+                });
+
+                // Send confirmation back to subscriber's chain
+                if let Ok(sub_chain) = subscriber_chain_id.parse::<ChainId>() {
+                    self.runtime.prepare_message(Message::SubscriptionConfirmed {
+                        subscription_id,
+                        strategist: strategist.clone(),
+                        strategist_chain_id: chain_id.to_string(),
+                        end_timestamp,
+                    }).send_to(sub_chain);
                 }
             }
             Message::SubscriptionConfirmed {
@@ -373,6 +375,15 @@ impl AgentHubContract {
         self.state.signals_by_strategy.insert(&strategy_id, signal_ids)
             .expect("Failed to update signal list");
 
+        // Emit event for cross-chain subscribers
+        let stream = StreamName::from(b"signals");
+        self.runtime.emit(stream, &AgentHubEvent::SignalPublished {
+            strategy_id,
+            signal_id: id,
+            direction,
+            confidence_bps,
+        });
+
         AgentHubResponse::SignalPublished { id }
     }
 
@@ -408,6 +419,15 @@ impl AgentHubContract {
 
         // Update strategy stats
         let _ = self.update_strategy_stats(strategy_id).await;
+
+        // Emit event for cross-chain subscribers
+        let stream = StreamName::from(b"signals");
+        self.runtime.emit(stream, &AgentHubEvent::SignalResolved {
+            strategy_id,
+            signal_id,
+            result,
+            pnl_bps,
+        });
 
         AgentHubResponse::SignalResolved {
             id: signal_id,
@@ -533,6 +553,13 @@ impl AgentHubContract {
         self.state.strategy_stats.insert(&strategy_id, stats)
             .expect("Failed to update stats");
 
+        // Emit event for follow
+        let stream = StreamName::from(b"follows");
+        self.runtime.emit(stream, &AgentHubEvent::StrategyFollowed {
+            strategy_id,
+            follower: follower_owner,
+        });
+
         AgentHubResponse::Followed { strategy_id }
     }
 
@@ -560,6 +587,13 @@ impl AgentHubContract {
         stats.followers = new_count;
         self.state.strategy_stats.insert(&strategy_id, stats)
             .expect("Failed to update stats");
+
+        // Emit event for unfollow
+        let stream = StreamName::from(b"follows");
+        self.runtime.emit(stream, &AgentHubEvent::StrategyUnfollowed {
+            strategy_id,
+            follower: follower_owner,
+        });
 
         AgentHubResponse::Unfollowed { strategy_id }
     }
@@ -690,6 +724,7 @@ impl AgentHubContract {
             self.runtime.prepare_message(Message::SubscriptionRequest {
                 subscriber: subscriber.clone(),
                 subscriber_chain_id,
+                strategist: strategist.clone(),
                 timestamp,
             }).send_to(target_chain);
         }
@@ -729,6 +764,15 @@ impl AgentHubContract {
                     self.state.subscriptions.insert(&sub_id, sub)
                         .expect("Failed to update subscription");
                 }
+
+                // Emit event for subscription cancelled
+                let stream = StreamName::from(b"subscriptions");
+                self.runtime.emit(stream, &AgentHubEvent::SubscriptionCancelled {
+                    subscription_id: sub_id,
+                    subscriber: subscriber.clone(),
+                    strategist: strategist.clone(),
+                });
+
                 AgentHubResponse::Unsubscribed { strategist }
             }
             None => AgentHubError::NotSubscribed.into(),
